@@ -1,0 +1,22 @@
+---
+import Social from './Social.astro';
+import { personal } from '../data/personal';
+---
+
+<footer class="border-t border-neutral-200 dark:border-neutral-800 mt-auto">
+  <div class="mx-auto max-w-3xl px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex flex-col items-center sm:items-start gap-1">
+      <p class="text-sm text-neutral-500 dark:text-neutral-400">
+        &copy; {new Date().getFullYear()} {personal.name}
+      </p>
+      <p class="text-xs text-neutral-400 dark:text-neutral-600">
+        Built with <a href="https://astro.build" class="underline underline-offset-2 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">Astro</a>
+      </p>
+    </div>
+    <div class="flex items-center gap-4">
+      <Social platform="github" username={personal.github} />
+      <Social platform="linkedin" username={personal.linkedin} />
+      <Social platform="email" username={personal.email} />
+    </div>
+  </div>
+</footer>

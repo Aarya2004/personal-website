@@ -1,17 +1,31 @@
 ---
-const pageTitle = "My Astro Learning Blog";
+import Layout from '../layouts/Layout.astro';
+import BlogPostCard from '../components/BlogPostCard.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+function readingTime(body: string): string {
+  const words = body.trim().split(/\s+/).length;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
 ---
 
-<body>
-    <a href="/">Home</a>
-    <a href="/about/">About</a>
-    <a href="/blog/">Blog</a>
-  
-    <h1>My Astro Learning Blog</h1>
-    <p>This is where I will post about my journey learning Astro.</p>
-    <ul>
-        <li><a href="/posts/post-1/">Post 1</a></li>
-        <li><a href="/posts/post-2/">Post 2</a></li>
-        <li><a href="/posts/post-3/">Post 3</a></li>
-    </ul>
-</body>
+<Layout title="Blog" description="Thoughts and writings" activeNav="blog">
+  <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Blog</h1>
+  <p class="mt-2 text-neutral-600 dark:text-neutral-400">Thoughts, learnings, and things I find interesting.</p>
+
+  <div class="mt-10 flex flex-col gap-4">
+    {posts.map((post) => (
+      <BlogPostCard
+        title={post.data.title}
+        description={post.data.description}
+        pubDate={post.data.pubDate}
+        tags={post.data.tags}
+        slug={post.slug}
+        readingTime={readingTime(post.body)}
+      />
+    ))}
+  </div>
+</Layout>

@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { projects } from '../data/projects';
+
+const allTags = [...new Set(projects.flatMap((p) => p.tags))].sort();
+---
+
+<Layout title="Projects" description="Things I've built" activeNav="projects">
+  <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Projects</h1>
+  <p class="mt-2 text-neutral-600 dark:text-neutral-400">Things I've built and worked on.</p>
+
+  <div class="mt-6 flex flex-wrap gap-2" id="tag-filter-bar">
+    {allTags.map((tag) => (
+      <button
+        data-tag={tag}
+        class="tag-btn rounded-full border border-neutral-200 dark:border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 transition-all hover:border-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+      >
+        {tag}
+      </button>
+    ))}
+  </div>
+
+  <div class="mt-6 grid gap-4 sm:grid-cols-2" id="projects-grid">
+    {projects.map((project) => (
+      <div data-project-tags={project.tags.join(',')}>
+        <ProjectCard project={project} />
+      </div>
+    ))}
+  </div>
+</Layout>
+
+<style>
+  .tag-btn[data-active="true"] {
+    background: #171717;
+    color: #ffffff;
+    border-color: #171717;
+  }
+  :global(.dark) .tag-btn[data-active="true"] {
+    background: #f5f5f5;
+    color: #171717;
+    border-color: #f5f5f5;
+  }
+</style>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.tag-btn');
+  const cards = document.querySelectorAll<HTMLElement>('[data-project-tags]');
+  let activeTag: string | null = null;
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.tag!;
+      if (activeTag === tag) {
+        activeTag = null;
+        buttons.forEach((b) => delete b.dataset.active);
+        cards.forEach((c) => (c.style.display = ''));
+      } else {
+        activeTag = tag;
+        buttons.forEach((b) => delete b.dataset.active);
+        btn.dataset.active = 'true';
+        cards.forEach((c) => {
+          c.style.display = c.dataset.projectTags!.split(',').includes(tag) ? '' : 'none';
+        });
+      }
+    });
+  });
+</script>
