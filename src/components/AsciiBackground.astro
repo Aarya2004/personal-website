@@ -246,8 +246,7 @@
         } else {
           ctx.shadowBlur = 0;
         }
-        const ch = wordChars[idx] || GLYPHS[glyphs[idx]];
-        ctx.fillText(ch, c * cellW, r * cellH);
+        ctx.fillText(GLYPHS[glyphs[idx]], c * cellW, r * cellH);
       }
     }
   }
@@ -334,8 +333,7 @@
     } else {
       ctx.shadowBlur = 0;
     }
-    const ch = wordChars[index] || GLYPHS[glyphs[index]];
-    ctx.fillText(ch, x, y);
+    ctx.fillText(GLYPHS[glyphs[index]], x, y);
   }
 
   function paintWordCell(index: number, opacity: number, shadow: number, accentBlend: number): void {
@@ -460,7 +458,6 @@
       );
       for (let i = 0; i < mutations; i++) {
         const idx = Math.floor(Math.random() * glyphs.length);
-        if (wordCellMap[idx] !== -1) continue; // skip word cells
         glyphs[idx] = Math.floor(Math.random() * GLYPHS.length);
         paintCell(idx, opacity);
       }
