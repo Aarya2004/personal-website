@@ -1,0 +1,144 @@
+---
+// AsciiBackground.astro
+// Ambient editorial ASCII field rendered to a single fixed-position canvas.
+// Decorative only — aria-hidden, pointer-events: none, z-index: -1.
+---
+
+<canvas id="ascii-bg" aria-hidden="true"></canvas>
+<div id="ascii-vignette" aria-hidden="true"></div>
+
+<style>
+  #ascii-bg {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+    display: block;
+  }
+  #ascii-vignette {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 520px 420px at 50% 45%,
+      var(--ascii-bg-color, #ffffff) 0%,
+      var(--ascii-bg-color, #ffffff) 30%,
+      transparent 90%
+    );
+  }
+  :global(html.dark) #ascii-vignette {
+    --ascii-bg-color: #0a0a0a; /* neutral-950 */
+  }
+  :global(html:not(.dark)) #ascii-vignette {
+    --ascii-bg-color: #ffffff;
+  }
+</style>
+
+<script>
+  // --- Tunable constants ------------------------------------------------
+  const GLYPHS = "····..::,,'`--—+/\\|()[]{}<>aeiorstn";
+  const FONT_SIZE = 12;
+  const FONT_FAMILY = "'JetBrains Mono', ui-monospace, monospace";
+  const BASE_OPACITY_LIGHT = 0.08;
+  const BASE_OPACITY_DARK = 0.06;
+
+  // --- State ------------------------------------------------------------
+  let canvas: HTMLCanvasElement | null = null;
+  let ctx: CanvasRenderingContext2D | null = null;
+  let cellW = 0;
+  let cellH = 0;
+  let cols = 0;
+  let rows = 0;
+  let glyphs: Uint8Array = new Uint8Array(0);
+  let dpr = 1;
+
+  function isDark(): boolean {
+    return document.documentElement.classList.contains('dark');
+  }
+
+  function baseOpacity(): number {
+    return isDark() ? BASE_OPACITY_DARK : BASE_OPACITY_LIGHT;
+  }
+
+  function glyphColor(opacity: number): string {
+    return isDark()
+      ? `rgba(255,255,255,${opacity})`
+      : `rgba(0,0,0,${opacity})`;
+  }
+
+  function measureCell(): { w: number; h: number } {
+    if (!ctx) return { w: 0, h: 0 };
+    ctx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
+    const metrics = ctx.measureText('M');
+    const w = metrics.width;
+    const h = FONT_SIZE * 1.2;
+    return { w, h };
+  }
+
+  function resize(): void {
+    if (!canvas || !ctx) return;
+    dpr = window.devicePixelRatio || 1;
+    const cssW = window.innerWidth;
+    const cssH = window.innerHeight;
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const cell = measureCell();
+    cellW = cell.w;
+    cellH = cell.h;
+    cols = Math.ceil(cssW / cellW);
+    rows = Math.ceil(cssH / cellH);
+    glyphs = new Uint8Array(cols * rows);
+    for (let i = 0; i < glyphs.length; i++) {
+      glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
+    }
+    paintAll();
+  }
+
+  function paintAll(): void {
+    if (!ctx || !canvas) return;
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    ctx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = glyphColor(baseOpacity());
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const g = GLYPHS[glyphs[r * cols + c]];
+        ctx.fillText(g, c * cellW, r * cellH);
+      }
+    }
+  }
+
+  function init(): void {
+    canvas = document.getElementById('ascii-bg') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    resize();
+  }
+
+  // Register module-level listeners exactly once.
+  const themeObserver = new MutationObserver(() => paintAll());
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+
+  document.addEventListener('astro:after-swap', () => {
+    init();
+  });
+
+  let resizeTimer: number | undefined;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(resize, 150);
+  });
+
+  init();
+</script>
