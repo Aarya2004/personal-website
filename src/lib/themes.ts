@@ -144,6 +144,13 @@ export function applyPalette(
     root.setAttribute('data-theme-active', 'true');
 
     const bg = hexToRgb(p.bgHex);
+
+    // Luminance-based dark-class toggle so Tailwind dark: variants engage
+    // under dark themes (e.g. Graphite) regardless of localStorage theme.
+    const bgLum = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b;
+    if (bgLum < 128) root.classList.add('dark');
+    else root.classList.remove('dark');
+
     const text = hexToRgb(p.textHex);
 
     root.style.setProperty('--theme-bg', p.bgHex);

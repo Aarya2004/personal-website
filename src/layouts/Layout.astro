@@ -98,6 +98,17 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
           const colorMode = localStorage.getItem('colorMode') || 'theme';
           const paletteId = localStorage.getItem('paletteId') || 'ember';
           const p = PALETTES[paletteId] || PALETTES.ember;
+
+          // In theme mode, let the theme's bg luminance decide dark class.
+          // This way Graphite (dark bg) engages all Tailwind dark: variants,
+          // and light themes unset the dark class even if OS prefers dark.
+          if (colorMode === 'theme') {
+            const [br, bg2, bb] = hexToRgb(p.bg);
+            const bgLum = 0.299 * br + 0.587 * bg2 + 0.114 * bb;
+            if (bgLum < 128) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+          }
+
           const root = document.documentElement;
           const accentRgb = hexToRgb(p.accent);
           root.style.setProperty('--accent', p.accent);
@@ -194,6 +205,8 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
       html[data-theme-active="true"] h3,
       html[data-theme-active="true"] h4 {
         font-family: var(--font-display);
+        letter-spacing: normal;
+        font-weight: 500;
       }
       html[data-theme-active="true"] .font-mono,
       html[data-theme-active="true"] code,
