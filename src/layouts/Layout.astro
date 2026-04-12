@@ -80,10 +80,10 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
       })();
     </script>
   </head>
-  <body class="min-h-screen bg-[color:var(--theme-bg-light,#ffffff)] dark:bg-[color:var(--theme-bg-dark,#0a0a0a)] text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-300">
+  <body class="min-h-screen flex flex-col bg-[color:var(--theme-bg-light,#ffffff)] dark:bg-[color:var(--theme-bg-dark,#0a0a0a)] text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-300">
     <AsciiBackground />
     <Header activeNav={activeNav} />
-    <main class="mx-auto max-w-3xl px-6 py-12" transition:animate="fade">
+    <main class="mx-auto w-full max-w-3xl px-6 py-12 flex-grow" transition:animate="fade">
       <slot />
     </main>
     <Footer />
