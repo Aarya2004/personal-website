@@ -295,25 +295,40 @@
 
   function paintAll(): void {
     if (!ctx || !canvas) return;
-    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-    ctx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
-    ctx.textBaseline = 'top';
-    ctx.shadowBlur = 0;
+    // Paint to an offscreen canvas first, then blit in one draw call so the
+    // main canvas never shows a partially-painted frame during theme flips.
+    const cssW = canvas.width / dpr;
+    const cssH = canvas.height / dpr;
+    const off = document.createElement('canvas');
+    off.width = canvas.width;
+    off.height = canvas.height;
+    const octx = off.getContext('2d');
+    if (!octx) return;
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    octx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
+    octx.textBaseline = 'top';
     const op = baseOpacity();
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const style = cellStyle(idx, op);
-        ctx.fillStyle = style.fill;
+        octx.fillStyle = style.fill;
         if (style.shadow > 0) {
-          ctx.shadowColor = style.fill;
-          ctx.shadowBlur = style.shadow;
+          octx.shadowColor = style.fill;
+          octx.shadowBlur = style.shadow;
         } else {
-          ctx.shadowBlur = 0;
+          octx.shadowBlur = 0;
         }
-        ctx.fillText(GLYPHS[glyphs[idx]], c * cellW, r * cellH);
+        octx.fillText(GLYPHS[glyphs[idx]], c * cellW, r * cellH);
       }
     }
+    // Single blit to main canvas — no intermediate frame.
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.drawImage(off, 0, 0, cssW, cssH);
+    // Restore ctx font/baseline state so subsequent paintCell calls (which
+    // assume these are set) continue to work as before.
+    ctx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
+    ctx.textBaseline = 'top';
   }
 
   function readAccent(): void {
