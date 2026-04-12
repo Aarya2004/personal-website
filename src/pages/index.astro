@@ -57,7 +57,7 @@ const recentPosts = (await getCollection('blog', ({ data }) => !data.draft))
         href={personal.resumePath}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:bg-neutral-700 dark:hover:bg-neutral-300 transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-white hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 transition-all"
       >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -81,7 +81,7 @@ const recentPosts = (await getCollection('blog', ({ data }) => !data.draft))
     <div class="mt-5 flex flex-col gap-3">
       {personal.currentRoles.map((role) => (
         <div class="flex items-start gap-3">
-          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-sm bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
+          <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-sm bg-[color:var(--accent)]" aria-hidden="true"></span>
           <span class="text-neutral-700 dark:text-neutral-300">{role}</span>
         </div>
       ))}
