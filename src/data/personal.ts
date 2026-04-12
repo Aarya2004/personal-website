@@ -9,12 +9,12 @@ export const personal = {
   resumePath: "/Aarya_Prakash_Resume.pdf",
   bio: "CS student at UofT passionate about building things that matter.",
   currentRoles: [
-    "Vice-Chair of Technology @ GenAIGenesis",
     "Co-founder @ MedPort",
   ],
   currentlyWorkingOn:
     "Building MedPort and leading tech initiatives at GenAIGenesis",
   pastRoles: [
+    "Vice-Chair of Technology @ GenAIGenesis",
     "Software Engineer Intern @ Wealthsimple",
     "Software Development Engineer Intern @ AWS",
     "Software Engineer Intern @ Scotiabank",
