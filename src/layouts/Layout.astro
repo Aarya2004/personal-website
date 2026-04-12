@@ -31,7 +31,7 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Unbounded:wght@400;500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap"
       rel="stylesheet"
     />
 
@@ -42,15 +42,51 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
     <script is:inline>
       (function () {
         const PALETTES = {
-          ember:     { accent: '#C03A2E', bgLight: '#FBF8F5', bgDark: '#0B0A0A' },
-          driftwood: { accent: '#D97706', bgLight: '#FDFBF6', bgDark: '#0C0B09' },
-          meridian:  { accent: '#3949AB', bgLight: '#F7F8FB', bgDark: '#0A0B0E' },
-          moss:      { accent: '#2F6B4E', bgLight: '#F7F9F6', bgDark: '#0A0C0A' },
-          graphite:  { accent: '#475569', bgLight: '#FFFFFF', bgDark: '#000000' },
+          ember: {
+            accent: '#B8342A', bg: '#F7EFE6', text: '#2A1A16',
+            display: "'Instrument Serif', Georgia, serif",
+            body: "'DM Sans', system-ui, sans-serif",
+            mono: "'JetBrains Mono', ui-monospace, monospace",
+            asciiBase: [20, 15, 12], glowMult: 1.0,
+          },
+          driftwood: {
+            accent: '#A0651F', bg: '#F4EDDF', text: '#2B2418',
+            display: "'Fraunces', Georgia, serif",
+            body: "'Lora', Georgia, serif",
+            mono: "'JetBrains Mono', ui-monospace, monospace",
+            asciiBase: [60, 40, 20], glowMult: 1.0,
+          },
+          meridian: {
+            accent: '#2E3FA0', bg: '#F2F5FA', text: '#0F1629',
+            display: "'Unbounded', system-ui, sans-serif",
+            body: "'Inter', system-ui, sans-serif",
+            mono: "'IBM Plex Mono', ui-monospace, monospace",
+            asciiBase: [30, 40, 70], glowMult: 0.5,
+          },
+          moss: {
+            accent: '#2F6B4E', bg: '#EEF0E7', text: '#13211A',
+            display: "'EB Garamond', Georgia, serif",
+            body: "'EB Garamond', Georgia, serif",
+            mono: "'JetBrains Mono', ui-monospace, monospace",
+            asciiBase: [30, 50, 35], glowMult: 1.4,
+          },
+          graphite: {
+            accent: '#8BA3C7', bg: '#2A2C30', text: '#DADCE0',
+            display: "'IBM Plex Mono', ui-monospace, monospace",
+            body: "'IBM Plex Sans', system-ui, sans-serif",
+            mono: "'IBM Plex Mono', ui-monospace, monospace",
+            asciiBase: [200, 210, 225], glowMult: 1.8,
+          },
         };
         function hexToRgb(hex) {
           const c = hex.replace('#', '');
           return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
+        }
+        function mix(a, b, t) {
+          const r = Math.round(a[0] + (b[0] - a[0]) * t);
+          const g = Math.round(a[1] + (b[1] - a[1]) * t);
+          const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+          return `rgb(${r},${g},${bl})`;
         }
         function apply() {
           const theme =
@@ -63,14 +99,39 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
           const paletteId = localStorage.getItem('paletteId') || 'ember';
           const p = PALETTES[paletteId] || PALETTES.ember;
           const root = document.documentElement;
+          const accentRgb = hexToRgb(p.accent);
           root.style.setProperty('--accent', p.accent);
-          const [r, g, b] = hexToRgb(p.accent);
-          root.style.setProperty('--accent-muted', `rgba(${r},${g},${b},0.12)`);
-          root.style.setProperty('--accent-rgb', `${r} ${g} ${b}`);
+          root.style.setProperty('--accent-muted', `rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},0.12)`);
+          root.style.setProperty('--accent-rgb', `${accentRgb[0]} ${accentRgb[1]} ${accentRgb[2]}`);
+
           if (colorMode === 'theme') {
-            root.style.setProperty('--theme-bg-light', p.bgLight);
-            root.style.setProperty('--theme-bg-dark', p.bgDark);
+            root.setAttribute('data-theme-active', 'true');
+            const bg = hexToRgb(p.bg);
+            const text = hexToRgb(p.text);
+            root.style.setProperty('--theme-bg', p.bg);
+            root.style.setProperty('--theme-text', p.text);
+            root.style.setProperty('--theme-text-muted', mix(text, bg, 0.35));
+            root.style.setProperty('--theme-border', mix(bg, text, 0.15));
+            root.style.setProperty('--theme-surface', mix(bg, text, 0.04));
+            root.style.setProperty('--font-display', p.display);
+            root.style.setProperty('--font-body', p.body);
+            root.style.setProperty('--font-mono', p.mono);
+            root.style.setProperty('--ascii-base-rgb', `${p.asciiBase[0]} ${p.asciiBase[1]} ${p.asciiBase[2]}`);
+            root.style.setProperty('--ripple-glow-mult', String(p.glowMult));
+            root.style.setProperty('--theme-bg-light', p.bg);
+            root.style.setProperty('--theme-bg-dark', p.bg);
           } else {
+            root.removeAttribute('data-theme-active');
+            root.style.removeProperty('--theme-bg');
+            root.style.removeProperty('--theme-text');
+            root.style.removeProperty('--theme-text-muted');
+            root.style.removeProperty('--theme-border');
+            root.style.removeProperty('--theme-surface');
+            root.style.removeProperty('--font-display');
+            root.style.removeProperty('--font-body');
+            root.style.removeProperty('--font-mono');
+            root.style.removeProperty('--ascii-base-rgb');
+            root.style.removeProperty('--ripple-glow-mult');
             root.style.setProperty('--theme-bg-light', '#ffffff');
             root.style.setProperty('--theme-bg-dark', '#0a0a0a');
           }
@@ -121,6 +182,39 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
       [data-animate].animate-in {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      /* Theme-mode overrides — only active when a full theme is selected. */
+      html[data-theme-active="true"] body {
+        font-family: var(--font-body);
+        color: var(--theme-text);
+      }
+      html[data-theme-active="true"] h1,
+      html[data-theme-active="true"] h2,
+      html[data-theme-active="true"] h3,
+      html[data-theme-active="true"] h4 {
+        font-family: var(--font-display);
+      }
+      html[data-theme-active="true"] .font-mono,
+      html[data-theme-active="true"] code,
+      html[data-theme-active="true"] pre {
+        font-family: var(--font-mono);
+      }
+      html[data-theme-active="true"] hr {
+        border-color: var(--theme-border);
+      }
+      html[data-theme-active="true"] .theme-card-border {
+        border-color: var(--theme-border);
+      }
+      html[data-theme-active="true"] .theme-text-muted {
+        color: var(--theme-text-muted);
+      }
+      html[data-theme-active="true"] .theme-surface {
+        background-color: var(--theme-surface);
+      }
+      html[data-theme-active="true"] header,
+      html[data-theme-active="true"] footer {
+        background-color: color-mix(in oklab, var(--theme-bg) 85%, transparent);
       }
     </style>
   </body>
