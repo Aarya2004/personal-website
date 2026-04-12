@@ -336,15 +336,17 @@
     ctx.fillText(GLYPHS[glyphs[index]], x, y);
   }
 
-  function paintWordCell(index: number, opacity: number, shadow: number, accentBlend: number): void {
+  function paintWord(word: PlacedWord, opacity: number, shadow: number, accentBlend: number): void {
     if (!ctx) return;
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-    const x = col * cellW;
-    const y = row * cellH;
-    ctx.clearRect(x, y, cellW + 1, cellH);
 
-    // Resolve base color (matches cellStyle fallback behavior).
+    // Clear all cells for this word so ambient glyphs underneath don't show through.
+    const wordLen = word.text.length;
+    const x0 = word.col * cellW;
+    const y0 = word.row * cellH;
+    const w = wordLen * cellW;
+    ctx.clearRect(x0, y0, w + 1, cellH);
+
+    // Resolve base color (matches paintWordCell fallback behavior).
     let baseR: number, baseG: number, baseB: number;
     if (asciiBaseSet) {
       baseR = asciiBaseR;
@@ -355,7 +357,7 @@
       baseR = baseG = baseB = dark ? 255 : 0;
     }
 
-    // Blend accent over base by accentBlend weight.
+    // Blend accent over base.
     const r2 = Math.round(baseR + (accentR - baseR) * accentBlend);
     const g2 = Math.round(baseG + (accentG - baseG) * accentBlend);
     const b2 = Math.round(baseB + (accentB - baseB) * accentBlend);
@@ -367,8 +369,9 @@
     } else {
       ctx.shadowBlur = 0;
     }
-    const ch = wordChars[index] || '?';
-    ctx.fillText(ch, x, y);
+
+    // Draw the word as one continuous text — shadow halo forms a single coherent glow.
+    ctx.fillText(word.text, x0, y0);
   }
 
   function advanceClickRipples(): void {
@@ -482,22 +485,14 @@
             if (triggered) {
               word.state = 'revealing';
               word.stateStartMs = nowMs;
-              // Force all word cells to paint with full glow for a few ticks.
-              for (let k = 0; k < wordLen; k++) {
-                const idx = word.row * cols + (word.col + k);
-                paintWordCell(idx, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
-              }
+              paintWord(word, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
             }
           } else if (word.state === 'revealing') {
             if (nowMs - word.stateStartMs >= WORD_REVEAL_HOLD_MS) {
               word.state = 'fading';
               word.stateStartMs = nowMs;
             } else {
-              // Keep repainting at full glow to overpower ripple decay.
-              for (let k = 0; k < wordLen; k++) {
-                const idx = word.row * cols + (word.col + k);
-                paintWordCell(idx, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
-              }
+              paintWord(word, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
             }
           } else if (word.state === 'fading') {
             const t = (nowMs - word.stateStartMs) / WORD_REVEAL_FADE_MS;
@@ -510,14 +505,10 @@
                 paintCell(idx, opacity);
               }
             } else {
-              // Lerp opacity and shadow toward baseline.
               const fadeProgress = 1 - t;
               const op = opacity + (WORD_REVEAL_OPACITY - opacity) * fadeProgress;
               const sh = WORD_REVEAL_SHADOW * rippleGlowMult * fadeProgress;
-              for (let k = 0; k < wordLen; k++) {
-                const idx = word.row * cols + (word.col + k);
-                paintWordCell(idx, op, sh, fadeProgress);
-              }
+              paintWord(word, op, sh, fadeProgress);
             }
           }
         }
