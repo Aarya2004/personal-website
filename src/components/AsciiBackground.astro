@@ -48,7 +48,7 @@
   const TICK_MS = 50;
   const RIPPLE_RADIUS_CELLS = 6;
   const RIPPLE_DECAY_PER_TICK = 255 / (600 / TICK_MS); // full decay in ~600ms
-  const EXCITED_OPACITY_BONUS = 0.10;
+  const EXCITED_PEAK_OPACITY_BONUS = 0.19;
   const SCROLL_BOOST_MAX = 1.0;
   const SCROLL_BOOST_DECAY = 0.06; // per tick; ~400ms to fully decay
   const SCROLL_VELOCITY_SCALE = 0.01; // px/frame → boost
@@ -76,6 +76,9 @@
   let scrollBoost = 0;
   let lastScrollY = 0;
   let scrollVelocity = 0;
+  let accentR = 192;
+  let accentG = 58;
+  let accentB = 46;
 
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
@@ -83,12 +86,6 @@
 
   function baseOpacity(): number {
     return isDark() ? BASE_OPACITY_DARK : BASE_OPACITY_LIGHT;
-  }
-
-  function glyphColor(opacity: number): string {
-    return isDark()
-      ? `rgba(255,255,255,${opacity})`
-      : `rgba(0,0,0,${opacity})`;
   }
 
   function measureCell(): { w: number; h: number } {
@@ -129,29 +126,48 @@
     ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     ctx.font = `${FONT_SIZE}px ${FONT_FAMILY}`;
     ctx.textBaseline = 'top';
-    ctx.fillStyle = glyphColor(baseOpacity());
+    const op = baseOpacity();
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const g = GLYPHS[glyphs[r * cols + c]];
-        ctx.fillText(g, c * cellW, r * cellH);
+        const idx = r * cols + c;
+        ctx.fillStyle = cellStyle(idx, op);
+        ctx.fillText(GLYPHS[glyphs[idx]], c * cellW, r * cellH);
       }
     }
   }
 
-  function opacityFor(index: number, base: number): number {
-    const e = excitement[index];
-    if (e === 0) return base;
-    return base + (e / 255) * EXCITED_OPACITY_BONUS;
+  function readAccent(): void {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim();
+    if (!v) return;
+    const parts = v.split(/\s+/).map((n) => parseInt(n, 10));
+    if (parts.length === 3 && parts.every((n) => !isNaN(n))) {
+      [accentR, accentG, accentB] = parts;
+    }
   }
 
-  function paintCell(index: number, opacity: number): void {
+  function cellStyle(index: number, baseOpacity: number): string {
+    const e = excitement[index] / 255;
+    const s = scrollBoost;
+    const opacity = baseOpacity + e * EXCITED_PEAK_OPACITY_BONUS;
+    const blend = Math.min(0.8, e * 0.9 + s * 0.4);
+    const dark = isDark();
+    const baseR = dark ? 255 : 0;
+    const baseG = dark ? 255 : 0;
+    const baseB = dark ? 255 : 0;
+    const r = Math.round(baseR + (accentR - baseR) * blend);
+    const g = Math.round(baseG + (accentG - baseG) * blend);
+    const b = Math.round(baseB + (accentB - baseB) * blend);
+    return `rgba(${r},${g},${b},${opacity})`;
+  }
+
+  function paintCell(index: number, baseOpacity: number): void {
     if (!ctx) return;
     const r = Math.floor(index / cols);
     const c = index % cols;
     const x = c * cellW;
     const y = r * cellH;
     ctx.clearRect(x, y, cellW + 1, cellH);
-    ctx.fillStyle = glyphColor(opacity);
+    ctx.fillStyle = cellStyle(index, baseOpacity);
     ctx.fillText(GLYPHS[glyphs[index]], x, y);
   }
 
@@ -196,14 +212,14 @@
       for (let i = 0; i < mutations; i++) {
         const idx = Math.floor(Math.random() * glyphs.length);
         glyphs[idx] = Math.floor(Math.random() * GLYPHS.length);
-        paintCell(idx, opacityFor(idx, opacity));
+        paintCell(idx, opacity);
       }
 
       // Excited cells re-roll every tick and decay.
       for (let i = 0; i < excitement.length; i++) {
         if (excitement[i] === 0) continue;
         glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
-        paintCell(i, opacityFor(i, opacity));
+        paintCell(i, opacity);
         const next = excitement[i] - RIPPLE_DECAY_PER_TICK;
         excitement[i] = next > 0 ? next : 0;
         if (excitement[i] === 0) {
@@ -233,12 +249,16 @@
     ctx = canvas.getContext('2d');
     if (!ctx) return;
     resize();
+    readAccent();
     stopLoop();
     startLoop();
   }
 
   // Register module-level listeners exactly once.
-  const themeObserver = new MutationObserver(() => paintAll());
+  const themeObserver = new MutationObserver(() => {
+    readAccent();
+    paintAll();
+  });
   themeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class'],
@@ -273,6 +293,11 @@
       paintAll();
       startLoop();
     }
+  });
+
+  document.addEventListener('theme-change', () => {
+    readAccent();
+    paintAll();
   });
 
   hasHover = window.matchMedia('(hover: hover)').matches;
