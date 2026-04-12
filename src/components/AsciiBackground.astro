@@ -46,6 +46,9 @@
   const BASE_OPACITY_DARK = 0.06;
   const MUTATION_RATE = 0.015;
   const TICK_MS = 50;
+  const RIPPLE_RADIUS_CELLS = 6;
+  const RIPPLE_DECAY_PER_TICK = 255 / (600 / TICK_MS); // full decay in ~600ms
+  const EXCITED_OPACITY_BONUS = 0.10;
 
   // --- State ------------------------------------------------------------
   let canvas: HTMLCanvasElement | null = null;
@@ -60,6 +63,11 @@
   let lastTickTime = 0;
   let reduceMotion = false;
   let paused = false;
+  let excitement: Uint8Array = new Uint8Array(0);
+  let cursorX = -1;
+  let cursorY = -1;
+  let cursorDirty = false;
+  let hasHover = false;
 
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
@@ -101,6 +109,7 @@
     cols = Math.ceil(cssW / cellW);
     rows = Math.ceil(cssH / cellH);
     glyphs = new Uint8Array(cols * rows);
+    excitement = new Uint8Array(cols * rows);
     for (let i = 0; i < glyphs.length; i++) {
       glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
     }
@@ -121,6 +130,12 @@
     }
   }
 
+  function opacityFor(index: number, base: number): number {
+    const e = excitement[index];
+    if (e === 0) return base;
+    return base + (e / 255) * EXCITED_OPACITY_BONUS;
+  }
+
   function paintCell(index: number, opacity: number): void {
     if (!ctx) return;
     const r = Math.floor(index / cols);
@@ -137,12 +152,48 @@
     if (!ctx) return;
     if (now - lastTickTime >= TICK_MS) {
       lastTickTime = now;
-      const mutations = Math.floor(glyphs.length * MUTATION_RATE);
       const opacity = baseOpacity();
+
+      // Apply cursor excitement to cells near the cursor.
+      if (cursorDirty && cursorX >= 0 && cursorY >= 0) {
+        const cc = Math.floor(cursorX / cellW);
+        const cr = Math.floor(cursorY / cellH);
+        const r2 = RIPPLE_RADIUS_CELLS * RIPPLE_RADIUS_CELLS;
+        for (let dr = -RIPPLE_RADIUS_CELLS; dr <= RIPPLE_RADIUS_CELLS; dr++) {
+          for (let dc = -RIPPLE_RADIUS_CELLS; dc <= RIPPLE_RADIUS_CELLS; dc++) {
+            const d2 = dr * dr + dc * dc;
+            if (d2 > r2) continue;
+            const rr = cr + dr;
+            const cc2 = cc + dc;
+            if (rr < 0 || rr >= rows || cc2 < 0 || cc2 >= cols) continue;
+            const falloff = 1 - Math.sqrt(d2) / RIPPLE_RADIUS_CELLS;
+            const level = Math.min(255, Math.floor(255 * falloff));
+            const idx = rr * cols + cc2;
+            if (level > excitement[idx]) excitement[idx] = level;
+          }
+        }
+        cursorDirty = false;
+      }
+
+      // Ambient random mutations.
+      const mutations = Math.floor(glyphs.length * MUTATION_RATE);
       for (let i = 0; i < mutations; i++) {
         const idx = Math.floor(Math.random() * glyphs.length);
         glyphs[idx] = Math.floor(Math.random() * GLYPHS.length);
-        paintCell(idx, opacity);
+        paintCell(idx, opacityFor(idx, opacity));
+      }
+
+      // Excited cells re-roll every tick and decay.
+      for (let i = 0; i < excitement.length; i++) {
+        if (excitement[i] === 0) continue;
+        glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
+        paintCell(i, opacityFor(i, opacity));
+        const next = excitement[i] - RIPPLE_DECAY_PER_TICK;
+        excitement[i] = next > 0 ? next : 0;
+        if (excitement[i] === 0) {
+          // One final repaint at baseline to shed the excitement glow.
+          paintCell(i, opacity);
+        }
       }
     }
     rafHandle = requestAnimationFrame(tick);
@@ -207,6 +258,21 @@
       startLoop();
     }
   });
+
+  hasHover = window.matchMedia('(hover: hover)').matches;
+
+  if (hasHover) {
+    window.addEventListener(
+      'mousemove',
+      (e) => {
+        if (reduceMotion) return;
+        cursorX = e.clientX;
+        cursorY = e.clientY;
+        cursorDirty = true;
+      },
+      { passive: true }
+    );
+  }
 
   init();
 </script>
