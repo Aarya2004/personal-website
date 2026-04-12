@@ -78,7 +78,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     fontDisplay: "'IBM Plex Mono', ui-monospace, monospace",
     fontBody: "'IBM Plex Sans', system-ui, sans-serif",
     fontMono: "'IBM Plex Mono', ui-monospace, monospace",
-    ripple: { asciiBaseRgb: [200, 210, 225], glowMultiplier: 1.8 },
+    ripple: { asciiBaseRgb: [90, 100, 115], glowMultiplier: 1.8 },
   },
 };
 
