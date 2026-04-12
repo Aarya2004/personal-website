@@ -12,7 +12,7 @@ export const personal = {
     "Co-founder @ MedPort",
   ],
   currentlyWorkingOn:
-    "Building MedPort and leading tech initiatives at GenAIGenesis",
+    "Building MedPort, studying distributed systems toward grad school, and shipping side projects.",
   pastRoles: [
     "Vice-Chair of Technology @ GenAIGenesis",
     "Software Engineer Intern @ Wealthsimple",
