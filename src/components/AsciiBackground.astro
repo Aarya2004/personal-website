@@ -23,7 +23,7 @@
     z-index: -1;
     pointer-events: none;
     background: radial-gradient(
-      ellipse 880px 680px at 50% 45%,
+      ellipse 720px 680px at 50% 45%,
       var(--ascii-bg-color, #ffffff) 0%,
       var(--ascii-bg-color, #ffffff) 40%,
       transparent 95%
@@ -48,6 +48,10 @@
   const TICK_MS = 50;
   const RIPPLE_RADIUS_CELLS = 6;
   const RIPPLE_DECAY_PER_TICK = 255 / (600 / TICK_MS); // full decay in ~600ms
+  const CLICK_RIPPLE_SPEED = 1.5;           // cells per tick
+  const CLICK_RIPPLE_THICKNESS = 2.5;       // cell-width of excited annulus at each tick
+  const CLICK_RIPPLE_INITIAL_LEVEL = 255;   // peak excitement at ring front
+  const CLICK_RIPPLE_MAX_RADIUS_CELLS = 200; // hard cap for ripple lifetime
   const EXCITED_PEAK_OPACITY_BONUS = 0.42;
   const SCROLL_BOOST_MAX = 1.0;
   const SCROLL_BOOST_DECAY = 0.06; // per tick; ~400ms to fully decay
@@ -73,6 +77,12 @@
   let cursorY = -1;
   let cursorDirty = false;
   let hasHover = false;
+  interface ClickRipple {
+    cx: number;           // center col
+    cy: number;           // center row
+    radius: number;       // current radius in cells (float, grows each tick)
+  }
+  let clickRipples: ClickRipple[] = [];
   let scrollBoost = 0;
   let lastScrollY = 0;
   let scrollVelocity = 0;
@@ -204,6 +214,50 @@
     ctx.fillText(GLYPHS[glyphs[index]], x, y);
   }
 
+  function advanceClickRipples(): void {
+    if (clickRipples.length === 0) return;
+    const r2Outer = (r: number) => r * r;
+    const toRemove: number[] = [];
+
+    for (let k = 0; k < clickRipples.length; k++) {
+      const rp = clickRipples[k];
+      const outerR = rp.radius;
+      const innerR = Math.max(0, rp.radius - CLICK_RIPPLE_THICKNESS);
+      const outerR2 = r2Outer(outerR);
+      const innerR2 = r2Outer(innerR);
+
+      // Bounding box for the annulus.
+      const minC = Math.max(0, Math.floor(rp.cx - outerR));
+      const maxC = Math.min(cols - 1, Math.ceil(rp.cx + outerR));
+      const minR = Math.max(0, Math.floor(rp.cy - outerR));
+      const maxR = Math.min(rows - 1, Math.ceil(rp.cy + outerR));
+
+      for (let rr = minR; rr <= maxR; rr++) {
+        for (let cc = minC; cc <= maxC; cc++) {
+          const dc = cc - rp.cx;
+          const dr = rr - rp.cy;
+          const d2 = dc * dc + dr * dr;
+          if (d2 <= outerR2 && d2 >= innerR2) {
+            // Fade excitement toward edge of annulus so the ring has a soft front.
+            const d = Math.sqrt(d2);
+            const falloff = 1 - Math.abs(d - (outerR - CLICK_RIPPLE_THICKNESS / 2)) / (CLICK_RIPPLE_THICKNESS / 2 + 0.01);
+            const level = Math.max(0, Math.min(CLICK_RIPPLE_INITIAL_LEVEL, Math.floor(CLICK_RIPPLE_INITIAL_LEVEL * Math.max(0, falloff))));
+            const idx = rr * cols + cc;
+            if (level > excitement[idx]) excitement[idx] = level;
+          }
+        }
+      }
+
+      rp.radius += CLICK_RIPPLE_SPEED;
+      if (rp.radius > CLICK_RIPPLE_MAX_RADIUS_CELLS) toRemove.push(k);
+    }
+
+    // Remove expired ripples (iterate backward to keep indices valid).
+    for (let i = toRemove.length - 1; i >= 0; i--) {
+      clickRipples.splice(toRemove[i], 1);
+    }
+  }
+
   function tick(now: number): void {
     if (paused) return;
     if (!ctx) return;
@@ -237,6 +291,9 @@
         }
         cursorDirty = false;
       }
+
+      // Advance click ripples.
+      advanceClickRipples();
 
       // Ambient random mutations.
       const mutations = Math.floor(
@@ -356,6 +413,41 @@
       const y = window.scrollY;
       scrollVelocity = Math.abs(y - lastScrollY);
       lastScrollY = y;
+    },
+    { passive: true }
+  );
+
+  function handleClick(clientX: number, clientY: number, target: EventTarget | null): void {
+    if (reduceMotion) return;
+    if (!canvas) return;
+    // Ignore clicks on interactive content.
+    if (target instanceof Element) {
+      const interactive = target.closest(
+        'a, button, input, textarea, select, label, [data-theme-picker], [data-no-ripple]'
+      );
+      if (interactive) return;
+    }
+    const cc = clientX / cellW;
+    const cy = clientY / cellH;
+    clickRipples.push({ cx: cc, cy: cy, radius: 0 });
+  }
+
+  window.addEventListener(
+    'mousedown',
+    (e) => {
+      // Only primary button.
+      if (e.button !== 0) return;
+      handleClick(e.clientX, e.clientY, e.target);
+    },
+    { passive: true }
+  );
+
+  window.addEventListener(
+    'touchstart',
+    (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      handleClick(t.clientX, t.clientY, e.target);
     },
     { passive: true }
   );
