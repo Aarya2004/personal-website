@@ -1,5 +1,5 @@
 ---
-import ThemeToggle from './ThemeToggle.astro';
+import ThemePicker from './ThemePicker.astro';
 import { personal } from '../data/personal';
 
 interface Props {
@@ -32,19 +32,19 @@ const navLinks = [
           class:list={[
             'px-3 py-1.5 text-sm font-medium transition-colors',
             activeNav === label.toLowerCase()
-              ? 'border-b-2 border-amber-500 dark:border-amber-400 text-neutral-900 dark:text-neutral-100'
+              ? 'border-b-2 border-[color:var(--accent)] text-neutral-900 dark:text-neutral-100'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100',
           ]}
         >
           {label}
         </a>
       ))}
-      <ThemeToggle />
+      <ThemePicker />
     </div>
 
     <!-- Mobile menu button -->
     <div class="flex items-center gap-2 sm:hidden">
-      <ThemeToggle />
+      <ThemePicker />
       <button
         id="mobile-menu-btn"
         aria-label="Toggle menu"
