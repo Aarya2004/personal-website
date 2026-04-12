@@ -11,7 +11,7 @@ interface Props {
 const { title, description, pubDate, tags, slug, readingTime } = Astro.props;
 ---
 
-<a href={`/blog/${slug}`} class="group block rounded-xl border border-neutral-200 dark:border-neutral-800 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-md">
+<a href={`/blog/${slug}`} class="group block theme-card-border rounded-xl border border-neutral-200 dark:border-neutral-800 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-md">
   <div class="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
     <time datetime={pubDate.toISOString()}>
       {pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
