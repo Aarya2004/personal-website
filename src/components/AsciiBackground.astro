@@ -44,6 +44,8 @@
   const FONT_FAMILY = "'JetBrains Mono', ui-monospace, monospace";
   const BASE_OPACITY_LIGHT = 0.08;
   const BASE_OPACITY_DARK = 0.06;
+  const MUTATION_RATE = 0.015;
+  const TICK_MS = 50;
 
   // --- State ------------------------------------------------------------
   let canvas: HTMLCanvasElement | null = null;
@@ -54,6 +56,10 @@
   let rows = 0;
   let glyphs: Uint8Array = new Uint8Array(0);
   let dpr = 1;
+  let rafHandle = 0;
+  let lastTickTime = 0;
+  let reduceMotion = false;
+  let paused = false;
 
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
@@ -115,12 +121,53 @@
     }
   }
 
+  function paintCell(index: number, opacity: number): void {
+    if (!ctx) return;
+    const r = Math.floor(index / cols);
+    const c = index % cols;
+    const x = c * cellW;
+    const y = r * cellH;
+    ctx.clearRect(x, y, cellW + 1, cellH);
+    ctx.fillStyle = glyphColor(opacity);
+    ctx.fillText(GLYPHS[glyphs[index]], x, y);
+  }
+
+  function tick(now: number): void {
+    if (paused) return;
+    if (!ctx) return;
+    if (now - lastTickTime >= TICK_MS) {
+      lastTickTime = now;
+      const mutations = Math.floor(glyphs.length * MUTATION_RATE);
+      const opacity = baseOpacity();
+      for (let i = 0; i < mutations; i++) {
+        const idx = Math.floor(Math.random() * glyphs.length);
+        glyphs[idx] = Math.floor(Math.random() * GLYPHS.length);
+        paintCell(idx, opacity);
+      }
+    }
+    rafHandle = requestAnimationFrame(tick);
+  }
+
+  function startLoop(): void {
+    if (reduceMotion) return;
+    if (rafHandle) cancelAnimationFrame(rafHandle);
+    lastTickTime = 0;
+    rafHandle = requestAnimationFrame(tick);
+  }
+
+  function stopLoop(): void {
+    if (rafHandle) cancelAnimationFrame(rafHandle);
+    rafHandle = 0;
+  }
+
   function init(): void {
     canvas = document.getElementById('ascii-bg') as HTMLCanvasElement | null;
     if (!canvas) return;
     ctx = canvas.getContext('2d');
     if (!ctx) return;
     resize();
+    stopLoop();
+    startLoop();
   }
 
   // Register module-level listeners exactly once.
@@ -138,6 +185,27 @@
   window.addEventListener('resize', () => {
     if (resizeTimer) window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(resize, 150);
+  });
+
+  const motionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+  reduceMotion = motionMQ.matches;
+  motionMQ.addEventListener('change', (e) => {
+    reduceMotion = e.matches;
+    if (reduceMotion) {
+      stopLoop();
+    } else if (!paused) {
+      startLoop();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    paused = document.hidden;
+    if (paused) {
+      stopLoop();
+    } else if (!reduceMotion) {
+      paintAll();
+      startLoop();
+    }
   });
 
   init();
