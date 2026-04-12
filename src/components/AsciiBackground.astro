@@ -89,6 +89,11 @@
   let accentR = 192;
   let accentG = 58;
   let accentB = 46;
+  let asciiBaseR = 0;
+  let asciiBaseG = 0;
+  let asciiBaseB = 0;
+  let asciiBaseSet = false;
+  let rippleGlowMult = 1.0;
 
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
@@ -163,36 +168,61 @@
     }
   }
 
+  function readAsciiBase(): void {
+    const style = getComputedStyle(document.documentElement);
+    const v = style.getPropertyValue('--ascii-base-rgb').trim();
+    if (v) {
+      const parts = v.split(/\s+/).map((n) => parseInt(n, 10));
+      if (parts.length === 3 && parts.every((n) => !isNaN(n))) {
+        [asciiBaseR, asciiBaseG, asciiBaseB] = parts;
+        asciiBaseSet = true;
+      } else {
+        asciiBaseSet = false;
+      }
+    } else {
+      asciiBaseSet = false;
+    }
+    const mult = parseFloat(style.getPropertyValue('--ripple-glow-mult'));
+    rippleGlowMult = isNaN(mult) || mult <= 0 ? 1.0 : mult;
+  }
+
   function cellStyle(index: number, baseOpacity: number): { fill: string; shadow: number } {
     const e = excitement[index] / 255;
     const s = scrollBoost;
     const opacity = baseOpacity + e * EXCITED_PEAK_OPACITY_BONUS;
     const blend = Math.min(0.9, e * 1.0 + s * 0.4);
-    const dark = isDark();
 
-    // Directional accent: brighten for dark mode, deepen for light mode.
+    // Base color: theme-provided when in theme mode, otherwise fall back to
+    // the neutral dark/light pair driven by the `dark` class.
+    let baseR: number, baseG: number, baseB: number;
+    if (asciiBaseSet) {
+      baseR = asciiBaseR;
+      baseG = asciiBaseG;
+      baseB = asciiBaseB;
+    } else {
+      const dark = isDark();
+      baseR = baseG = baseB = dark ? 255 : 0;
+    }
+
+    // Luminance-based decision for ripple target direction.
+    const baseLum = 0.299 * baseR + 0.587 * baseG + 0.114 * baseB;
+    const baseIsLight = baseLum > 127;
     let targetR: number, targetG: number, targetB: number;
-    if (dark) {
-      // Lighten accent ~40% toward white.
+    if (baseIsLight) {
       targetR = Math.round(accentR + (255 - accentR) * 0.4);
       targetG = Math.round(accentG + (255 - accentG) * 0.4);
       targetB = Math.round(accentB + (255 - accentB) * 0.4);
     } else {
-      // Deepen accent ~25% toward black.
       targetR = Math.round(accentR * 0.75);
       targetG = Math.round(accentG * 0.75);
       targetB = Math.round(accentB * 0.75);
     }
 
-    const baseR = dark ? 255 : 0;
-    const baseG = dark ? 255 : 0;
-    const baseB = dark ? 255 : 0;
     const r = Math.round(baseR + (targetR - baseR) * blend);
     const g = Math.round(baseG + (targetG - baseG) * blend);
     const b = Math.round(baseB + (targetB - baseB) * blend);
 
-    // Shadow blur proportional to excitement (0 for ambient cells — perf).
-    const shadow = e > 0 ? Math.round(6 * e) : 0;
+    const shadow = e > 0 ? Math.round(6 * e * rippleGlowMult) : 0;
     return { fill: `rgba(${r},${g},${b},${opacity})`, shadow };
   }
 
@@ -340,18 +370,25 @@
     if (!ctx) return;
     resize();
     readAccent();
+    readAsciiBase();
     stopLoop();
     startLoop();
   }
 
   // Register module-level listeners exactly once.
+  let themeRafPending = 0;
   const themeObserver = new MutationObserver(() => {
-    readAccent();
-    paintAll();
+    if (themeRafPending) return;
+    themeRafPending = requestAnimationFrame(() => {
+      themeRafPending = 0;
+      readAccent();
+      readAsciiBase();
+      paintAll();
+    });
   });
   themeObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ['class'],
+    attributeFilter: ['class', 'data-theme-active', 'style'],
   });
 
   document.addEventListener('astro:after-swap', () => {
@@ -387,6 +424,7 @@
 
   document.addEventListener('theme-change', () => {
     readAccent();
+    readAsciiBase();
     paintAll();
   });
 
