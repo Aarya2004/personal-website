@@ -59,6 +59,22 @@
   const SCROLL_OPACITY_BONUS = 0.04;
   const SCROLL_MUTATION_MULTIPLIER = 4;
 
+  // --- Hidden words constants -------------------------------------------
+  const WORDS = [
+    'medport', 'lighthouse', 'kotml', 'murmur', 'street-fighter',
+    'grove', 'duckdb', 'toronto', 'vancouver', 'dubai', 'uoft',
+    'distributed', 'build', 'ship', 'learn', 'debug', 'write',
+    'iterate', 'create', 'curious', 'focused', 'late-night',
+    'restless', 'cinematic',
+  ];
+  const WORD_REVEAL_THRESHOLD = 80;
+  const WORD_REVEAL_HOLD_MS = 1000;
+  const WORD_REVEAL_FADE_MS = 1500;
+  const WORD_REVEAL_OPACITY = 0.9;
+  const WORD_REVEAL_SHADOW = 12;
+  const WORD_EXCLUSION_W = 600;
+  const WORD_EXCLUSION_H = 500;
+
   // --- State ------------------------------------------------------------
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -95,6 +111,21 @@
   let asciiBaseSet = false;
   let rippleGlowMult = 1.0;
 
+  // --- Hidden words state -----------------------------------------------
+  interface PlacedWord {
+    text: string;
+    row: number;
+    col: number;
+    state: 'ambient' | 'revealing' | 'fading';
+    stateStartMs: number;
+  }
+  let placedWords: PlacedWord[] = [];
+  // wordCellMap: index-in-glyphs-array -> index into placedWords (or -1 if none)
+  let wordCellMap: Int16Array = new Int16Array(0);
+  // Parallel to glyphs[]: if a cell belongs to a word, its actual literal char.
+  // Empty string means "use GLYPHS[glyphs[idx]]".
+  let wordChars: string[] = [];
+
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
   }
@@ -110,6 +141,64 @@
     const w = metrics.width;
     const h = FONT_SIZE * 1.2;
     return { w, h };
+  }
+
+  function placeWords(): void {
+    placedWords = [];
+    wordCellMap = new Int16Array(cols * rows);
+    wordCellMap.fill(-1);
+
+    const cxCell = Math.floor((window.innerWidth / 2) / cellW);
+    const cyCell = Math.floor((window.innerHeight * 0.45) / cellH);
+    const exclRxCells = Math.ceil((WORD_EXCLUSION_W / 2) / cellW);
+    const exclRyCells = Math.ceil((WORD_EXCLUSION_H / 2) / cellH);
+
+    for (const text of WORDS) {
+      const len = text.length;
+      let placed = false;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const r = Math.floor(Math.random() * rows);
+        const c = Math.floor(Math.random() * (cols - len));
+        if (c < 0) continue;
+
+        // Exclusion zone check (ellipse around viewport center).
+        const midC = c + len / 2;
+        const dx = (midC - cxCell) / exclRxCells;
+        const dy = (r - cyCell) / exclRyCells;
+        if (dx * dx + dy * dy <= 1) continue;
+
+        // Check overlap with existing placed words (including 2-cell buffer).
+        let clear = true;
+        for (let k = 0; k < len; k++) {
+          for (let dr = -2; dr <= 2 && clear; dr++) {
+            for (let dc = -2; dc <= 2 && clear; dc++) {
+              const rr = r + dr;
+              const cc = c + k + dc;
+              if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue;
+              if (wordCellMap[rr * cols + cc] !== -1) clear = false;
+            }
+          }
+          if (!clear) break;
+        }
+        if (!clear) continue;
+
+        // Commit placement.
+        const wordIdx = placedWords.length;
+        placedWords.push({
+          text, row: r, col: c,
+          state: 'ambient', stateStartMs: 0,
+        });
+        for (let k = 0; k < len; k++) {
+          const idx = r * cols + (c + k);
+          wordCellMap[idx] = wordIdx;
+          wordChars[idx] = text[k];
+        }
+        placed = true;
+        break;
+      }
+      // If !placed: silently skip. Acceptable on small viewports.
+      void placed;
+    }
   }
 
   function resize(): void {
@@ -129,10 +218,13 @@
     cols = Math.ceil(cssW / cellW);
     rows = Math.ceil(cssH / cellH);
     glyphs = new Uint8Array(cols * rows);
-    excitement = new Uint8Array(cols * rows);
     for (let i = 0; i < glyphs.length; i++) {
       glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
     }
+    excitement = new Uint8Array(cols * rows);
+    wordChars = new Array(cols * rows);
+    for (let i = 0; i < wordChars.length; i++) wordChars[i] = '';
+    placeWords();
     paintAll();
   }
 
@@ -154,7 +246,8 @@
         } else {
           ctx.shadowBlur = 0;
         }
-        ctx.fillText(GLYPHS[glyphs[idx]], c * cellW, r * cellH);
+        const ch = wordChars[idx] || GLYPHS[glyphs[idx]];
+        ctx.fillText(ch, c * cellW, r * cellH);
       }
     }
   }
@@ -241,7 +334,43 @@
     } else {
       ctx.shadowBlur = 0;
     }
-    ctx.fillText(GLYPHS[glyphs[index]], x, y);
+    const ch = wordChars[index] || GLYPHS[glyphs[index]];
+    ctx.fillText(ch, x, y);
+  }
+
+  function paintWordCell(index: number, opacity: number, shadow: number, accentBlend: number): void {
+    if (!ctx) return;
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+    const x = col * cellW;
+    const y = row * cellH;
+    ctx.clearRect(x, y, cellW + 1, cellH);
+
+    // Resolve base color (matches cellStyle fallback behavior).
+    let baseR: number, baseG: number, baseB: number;
+    if (asciiBaseSet) {
+      baseR = asciiBaseR;
+      baseG = asciiBaseG;
+      baseB = asciiBaseB;
+    } else {
+      const dark = isDark();
+      baseR = baseG = baseB = dark ? 255 : 0;
+    }
+
+    // Blend accent over base by accentBlend weight.
+    const r2 = Math.round(baseR + (accentR - baseR) * accentBlend);
+    const g2 = Math.round(baseG + (accentG - baseG) * accentBlend);
+    const b2 = Math.round(baseB + (accentB - baseB) * accentBlend);
+
+    ctx.fillStyle = `rgba(${r2},${g2},${b2},${opacity})`;
+    if (shadow > 0) {
+      ctx.shadowColor = ctx.fillStyle as string;
+      ctx.shadowBlur = shadow;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+    const ch = wordChars[index] || '?';
+    ctx.fillText(ch, x, y);
   }
 
   function advanceClickRipples(): void {
@@ -325,20 +454,85 @@
       // Advance click ripples.
       advanceClickRipples();
 
-      // Ambient random mutations.
+      // Ambient random mutations (skip word cells).
       const mutations = Math.floor(
         glyphs.length * MUTATION_RATE * (1 + scrollBoost * (SCROLL_MUTATION_MULTIPLIER - 1))
       );
       for (let i = 0; i < mutations; i++) {
         const idx = Math.floor(Math.random() * glyphs.length);
+        if (wordCellMap[idx] !== -1) continue; // skip word cells
         glyphs[idx] = Math.floor(Math.random() * GLYPHS.length);
         paintCell(idx, opacity);
+      }
+
+      // Word reveal state machine.
+      if (placedWords.length > 0) {
+        const nowMs = now; // rAF timestamp
+        for (let w = 0; w < placedWords.length; w++) {
+          const word = placedWords[w];
+          const wordLen = word.text.length;
+
+          if (word.state === 'ambient') {
+            // Check if any cell of the word has excitement above threshold.
+            let triggered = false;
+            for (let k = 0; k < wordLen; k++) {
+              const idx = word.row * cols + (word.col + k);
+              if (excitement[idx] >= WORD_REVEAL_THRESHOLD) {
+                triggered = true;
+                break;
+              }
+            }
+            if (triggered) {
+              word.state = 'revealing';
+              word.stateStartMs = nowMs;
+              // Force all word cells to paint with full glow for a few ticks.
+              for (let k = 0; k < wordLen; k++) {
+                const idx = word.row * cols + (word.col + k);
+                paintWordCell(idx, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
+              }
+            }
+          } else if (word.state === 'revealing') {
+            if (nowMs - word.stateStartMs >= WORD_REVEAL_HOLD_MS) {
+              word.state = 'fading';
+              word.stateStartMs = nowMs;
+            } else {
+              // Keep repainting at full glow to overpower ripple decay.
+              for (let k = 0; k < wordLen; k++) {
+                const idx = word.row * cols + (word.col + k);
+                paintWordCell(idx, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
+              }
+            }
+          } else if (word.state === 'fading') {
+            const t = (nowMs - word.stateStartMs) / WORD_REVEAL_FADE_MS;
+            if (t >= 1) {
+              word.state = 'ambient';
+              word.stateStartMs = 0;
+              // Final clean paint back to baseline.
+              for (let k = 0; k < wordLen; k++) {
+                const idx = word.row * cols + (word.col + k);
+                paintCell(idx, opacity);
+              }
+            } else {
+              // Lerp opacity and shadow toward baseline.
+              const fadeProgress = 1 - t;
+              const op = opacity + (WORD_REVEAL_OPACITY - opacity) * fadeProgress;
+              const sh = WORD_REVEAL_SHADOW * rippleGlowMult * fadeProgress;
+              for (let k = 0; k < wordLen; k++) {
+                const idx = word.row * cols + (word.col + k);
+                paintWordCell(idx, op, sh, fadeProgress);
+              }
+            }
+          }
+        }
       }
 
       // Excited cells re-roll every tick and decay.
       for (let i = 0; i < excitement.length; i++) {
         if (excitement[i] === 0) continue;
-        glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
+        if (wordCellMap[i] === -1) {
+          // Non-word cells: re-roll glyph as before.
+          glyphs[i] = Math.floor(Math.random() * GLYPHS.length);
+        }
         paintCell(i, opacity);
         const next = excitement[i] - RIPPLE_DECAY_PER_TICK;
         excitement[i] = next > 0 ? next : 0;
