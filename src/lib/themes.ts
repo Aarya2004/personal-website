@@ -139,6 +139,8 @@ export function applyPalette(
     '--accent-rgb',
     `${accentRgb.r} ${accentRgb.g} ${accentRgb.b}`
   );
+  const accentLum = 0.299 * accentRgb.r + 0.587 * accentRgb.g + 0.114 * accentRgb.b;
+  root.style.setProperty('--accent-contrast', accentLum > 170 ? '#0a0a0a' : '#ffffff');
 
   if (colorMode === 'theme') {
     root.setAttribute('data-theme-active', 'true');

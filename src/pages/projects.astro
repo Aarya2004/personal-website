@@ -14,7 +14,7 @@ const allTags = [...new Set(projects.flatMap((p) => p.tags))].sort();
     {allTags.map((tag) => (
       <button
         data-tag={tag}
-        class="tag-btn rounded-full border border-neutral-200 dark:border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 transition-all hover:border-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+        class="tag-btn rounded-full border border-neutral-200 dark:border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 transition-all hover:border-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2"
       >
         {tag}
       </button>
@@ -32,14 +32,9 @@ const allTags = [...new Set(projects.flatMap((p) => p.tags))].sort();
 
 <style>
   .tag-btn[data-active="true"] {
-    background: #171717;
-    color: #ffffff;
-    border-color: #171717;
-  }
-  :global(.dark) .tag-btn[data-active="true"] {
-    background: #f5f5f5;
-    color: #171717;
-    border-color: #f5f5f5;
+    background: var(--accent);
+    color: var(--accent-contrast, #ffffff);
+    border-color: var(--accent);
   }
 </style>
 
