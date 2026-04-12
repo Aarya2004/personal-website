@@ -77,18 +77,46 @@
     const lightDarkBtn = root.querySelector<HTMLButtonElement>('[data-lightdark-btn]');
     if (!button || !popover || !swatchContainer || !lightDarkRow || !lightDarkBtn) return;
 
-    swatchContainer.innerHTML = '';
-    for (const id of PALETTE_IDS) {
-      const p = PALETTES[id];
-      const sw = document.createElement('button');
-      sw.type = 'button';
-      sw.dataset.swatch = id;
-      sw.setAttribute('aria-label', `Select ${p.name}`);
-      sw.className =
-        'h-7 w-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-neutral-950 transition-all hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400';
-      sw.style.backgroundColor = p.accent;
-      swatchContainer.appendChild(sw);
+    function populateSwatches(mode: ColorMode): void {
+      swatchContainer!.innerHTML = '';
+      if (mode === 'theme') {
+        swatchContainer!.className = 'mt-3 flex flex-col gap-1';
+        for (const id of PALETTE_IDS) {
+          const p = PALETTES[id];
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.dataset.swatch = id;
+          row.setAttribute('aria-label', `Select ${p.name}`);
+          row.className =
+            'flex items-center gap-3 w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]';
+          const chip = document.createElement('span');
+          chip.className = 'h-4 w-4 rounded-full shrink-0 border border-black/10 dark:border-white/10';
+          chip.style.backgroundColor = p.accent;
+          const label = document.createElement('span');
+          label.className = 'text-neutral-700 dark:text-neutral-300';
+          label.textContent = p.name;
+          row.appendChild(chip);
+          row.appendChild(label);
+          swatchContainer!.appendChild(row);
+        }
+      } else {
+        swatchContainer!.className = 'mt-3 flex items-center justify-between gap-2';
+        for (const id of PALETTE_IDS) {
+          const p = PALETTES[id];
+          const sw = document.createElement('button');
+          sw.type = 'button';
+          sw.dataset.swatch = id;
+          sw.setAttribute('aria-label', `Select ${p.name}`);
+          sw.className =
+            'h-7 w-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-neutral-950 transition-all hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400';
+          sw.style.backgroundColor = p.accent;
+          swatchContainer!.appendChild(sw);
+        }
+      }
     }
+
+    // Initial populate — re-populate whenever mode changes.
+    populateSwatches(getState().colorMode);
 
     function getState() {
       const colorMode = (localStorage.getItem('colorMode') as ColorMode) || DEFAULT_COLOR_MODE;
@@ -107,11 +135,20 @@
         b.classList.toggle('dark:text-neutral-100', active);
         b.classList.toggle('shadow-sm', active);
       });
+      const inThemeMode = colorMode === 'theme';
       swatchContainer!.querySelectorAll<HTMLElement>('[data-swatch]').forEach((el) => {
         const active = el.dataset.swatch === paletteId;
-        el.classList.toggle('ring-2', active);
-        el.classList.toggle('ring-neutral-900', active);
-        el.classList.toggle('dark:ring-neutral-100', active);
+        if (inThemeMode) {
+          el.classList.toggle('bg-neutral-100', active);
+          el.classList.toggle('dark:bg-neutral-800', active);
+          el.classList.toggle('font-medium', active);
+          el.classList.remove('ring-2', 'ring-neutral-900', 'dark:ring-neutral-100');
+        } else {
+          el.classList.toggle('ring-2', active);
+          el.classList.toggle('ring-neutral-900', active);
+          el.classList.toggle('dark:ring-neutral-100', active);
+          el.classList.remove('bg-neutral-100', 'dark:bg-neutral-800', 'font-medium');
+        }
       });
       lightDarkRow!.classList.toggle('hidden', colorMode !== 'accent');
       lightDarkRow!.classList.toggle('flex', colorMode === 'accent');
@@ -153,6 +190,7 @@
       b.addEventListener('click', () => {
         const mode = b.dataset.mode as ColorMode;
         localStorage.setItem('colorMode', mode);
+        populateSwatches(mode);
         applyAndPersist();
         render();
       });
