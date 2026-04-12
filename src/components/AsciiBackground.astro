@@ -49,6 +49,11 @@
   const RIPPLE_RADIUS_CELLS = 6;
   const RIPPLE_DECAY_PER_TICK = 255 / (600 / TICK_MS); // full decay in ~600ms
   const EXCITED_OPACITY_BONUS = 0.10;
+  const SCROLL_BOOST_MAX = 1.0;
+  const SCROLL_BOOST_DECAY = 0.06; // per tick; ~400ms to fully decay
+  const SCROLL_VELOCITY_SCALE = 0.01; // px/frame → boost
+  const SCROLL_OPACITY_BONUS = 0.04;
+  const SCROLL_MUTATION_MULTIPLIER = 4;
 
   // --- State ------------------------------------------------------------
   let canvas: HTMLCanvasElement | null = null;
@@ -68,6 +73,9 @@
   let cursorY = -1;
   let cursorDirty = false;
   let hasHover = false;
+  let scrollBoost = 0;
+  let lastScrollY = 0;
+  let scrollVelocity = 0;
 
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
@@ -152,7 +160,13 @@
     if (!ctx) return;
     if (now - lastTickTime >= TICK_MS) {
       lastTickTime = now;
-      const opacity = baseOpacity();
+      // Update scroll boost from velocity, then decay velocity sample.
+      const target = Math.min(SCROLL_BOOST_MAX, scrollVelocity * SCROLL_VELOCITY_SCALE);
+      if (target > scrollBoost) scrollBoost = target;
+      scrollBoost = Math.max(0, scrollBoost - SCROLL_BOOST_DECAY);
+      scrollVelocity = 0;
+
+      const opacity = baseOpacity() + scrollBoost * SCROLL_OPACITY_BONUS;
 
       // Apply cursor excitement to cells near the cursor.
       if (cursorDirty && cursorX >= 0 && cursorY >= 0) {
@@ -176,7 +190,9 @@
       }
 
       // Ambient random mutations.
-      const mutations = Math.floor(glyphs.length * MUTATION_RATE);
+      const mutations = Math.floor(
+        glyphs.length * MUTATION_RATE * (1 + scrollBoost * (SCROLL_MUTATION_MULTIPLIER - 1))
+      );
       for (let i = 0; i < mutations; i++) {
         const idx = Math.floor(Math.random() * glyphs.length);
         glyphs[idx] = Math.floor(Math.random() * GLYPHS.length);
@@ -273,6 +289,18 @@
       { passive: true }
     );
   }
+
+  lastScrollY = window.scrollY;
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (reduceMotion) return;
+      const y = window.scrollY;
+      scrollVelocity = Math.abs(y - lastScrollY);
+      lastScrollY = y;
+    },
+    { passive: true }
+  );
 
   init();
 </script>
