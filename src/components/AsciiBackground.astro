@@ -65,6 +65,7 @@
     'toronto', 'dubai', 'uoft', 'distributed',
     'build', 'ship', 'iterate', 'ml',
     'curious',
+    '$_', '</>', '0|1',
   ];
   const WORD_REVEAL_THRESHOLD = 80;
   const WORD_REVEAL_HOLD_MS = 1000;
@@ -73,6 +74,17 @@
   const WORD_REVEAL_SHADOW = 0;
   const WORD_EXCLUSION_W = 600;
   const WORD_EXCLUSION_H = 500;
+
+  // Multi-line ASCII art pieces. Each piece is an array of equal-width strings.
+  // Placed randomly alongside WORDS; reveal mechanic identical.
+  const MULTI_ART: string[][] = [
+    [
+      '*  ',
+      '|\\ ',
+      '| *',
+      '*  ',
+    ],
+  ];
 
   // --- State ------------------------------------------------------------
   let canvas: HTMLCanvasElement | null = null;
@@ -124,6 +136,15 @@
   // Parallel to glyphs[]: if a cell belongs to a word, its actual literal char.
   // Empty string means "use GLYPHS[glyphs[idx]]".
   let wordChars: string[] = [];
+
+  interface PlacedArt {
+    lines: string[]; // reference to a MULTI_ART entry
+    row: number;     // top-left row
+    col: number;     // top-left col
+    state: 'ambient' | 'revealing' | 'fading';
+    stateStartMs: number;
+  }
+  let placedArt: PlacedArt[] = [];
 
   function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
@@ -200,6 +221,72 @@
     }
   }
 
+  function placeArt(): void {
+    placedArt = [];
+    const cxCell = Math.floor((window.innerWidth / 2) / cellW);
+    const cyCell = Math.floor((window.innerHeight * 0.45) / cellH);
+    const exclRxCells = Math.ceil((WORD_EXCLUSION_W / 2) / cellW);
+    const exclRyCells = Math.ceil((WORD_EXCLUSION_H / 2) / cellH);
+
+    for (const lines of MULTI_ART) {
+      const h = lines.length;
+      const w = lines[0].length;
+      let placed = false;
+
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const r = Math.floor(Math.random() * (rows - h));
+        const c = Math.floor(Math.random() * (cols - w));
+        if (r < 0 || c < 0) continue;
+
+        // Exclusion zone (use the art's center).
+        const midR = r + h / 2;
+        const midC = c + w / 2;
+        const dx = (midC - cxCell) / exclRxCells;
+        const dy = (midR - cyCell) / exclRyCells;
+        if (dx * dx + dy * dy <= 1) continue;
+
+        // Collision check against existing words and prior art.
+        let clear = true;
+        for (let dr = 0; dr < h && clear; dr++) {
+          for (let dc = 0; dc < w && clear; dc++) {
+            // Check a 2-cell buffer around every non-space cell of the art.
+            if (lines[dr][dc] === ' ') continue;
+            for (let br = -2; br <= 2 && clear; br++) {
+              for (let bc = -2; bc <= 2 && clear; bc++) {
+                const rr = r + dr + br;
+                const cc = c + dc + bc;
+                if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue;
+                if (wordCellMap[rr * cols + cc] !== -1) clear = false;
+              }
+            }
+          }
+        }
+        if (!clear) continue;
+
+        // Commit. Use a NEGATIVE encoding in wordCellMap to distinguish art
+        // cells from word cells: art index + 1, negated, so -1 is "empty".
+        // But since -1 already means empty, use -(artIdx + 2) for art cells.
+        const artIdx = placedArt.length;
+        placedArt.push({
+          lines, row: r, col: c,
+          state: 'ambient', stateStartMs: 0,
+        });
+        for (let dr = 0; dr < h; dr++) {
+          for (let dc = 0; dc < w; dc++) {
+            const ch = lines[dr][dc];
+            if (ch === ' ') continue;
+            const idx = (r + dr) * cols + (c + dc);
+            wordCellMap[idx] = -(artIdx + 2);
+            wordChars[idx] = ch;
+          }
+        }
+        placed = true;
+        break;
+      }
+      void placed;
+    }
+  }
+
   function repositionWord(wordIdx: number): void {
     const word = placedWords[wordIdx];
     if (!word) return;
@@ -266,6 +353,84 @@
     }
   }
 
+  function repositionArt(artIdx: number): void {
+    const art = placedArt[artIdx];
+    if (!art) return;
+    const lines = art.lines;
+    const h = lines.length;
+    const w = lines[0].length;
+    const cxCell = Math.floor((window.innerWidth / 2) / cellW);
+    const cyCell = Math.floor((window.innerHeight * 0.45) / cellH);
+    const exclRxCells = Math.ceil((WORD_EXCLUSION_W / 2) / cellW);
+    const exclRyCells = Math.ceil((WORD_EXCLUSION_H / 2) / cellH);
+
+    // Clear old cells.
+    const oldRow = art.row;
+    const oldCol = art.col;
+    for (let dr = 0; dr < h; dr++) {
+      for (let dc = 0; dc < w; dc++) {
+        if (lines[dr][dc] === ' ') continue;
+        const idx = (oldRow + dr) * cols + (oldCol + dc);
+        if (idx >= 0 && idx < wordCellMap.length) {
+          wordCellMap[idx] = -1;
+          wordChars[idx] = '';
+        }
+      }
+    }
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const r = Math.floor(Math.random() * (rows - h));
+      const c = Math.floor(Math.random() * (cols - w));
+      if (r < 0 || c < 0) continue;
+      const midR = r + h / 2;
+      const midC = c + w / 2;
+      const dx = (midC - cxCell) / exclRxCells;
+      const dy = (midR - cyCell) / exclRyCells;
+      if (dx * dx + dy * dy <= 1) continue;
+
+      let clear = true;
+      for (let dr = 0; dr < h && clear; dr++) {
+        for (let dc = 0; dc < w && clear; dc++) {
+          if (lines[dr][dc] === ' ') continue;
+          for (let br = -2; br <= 2 && clear; br++) {
+            for (let bc = -2; bc <= 2 && clear; bc++) {
+              const rr = r + dr + br;
+              const cc = c + dc + bc;
+              if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue;
+              if (wordCellMap[rr * cols + cc] !== -1) clear = false;
+            }
+          }
+        }
+      }
+      if (!clear) continue;
+
+      art.row = r;
+      art.col = c;
+      for (let dr = 0; dr < h; dr++) {
+        for (let dc = 0; dc < w; dc++) {
+          const ch = lines[dr][dc];
+          if (ch === ' ') continue;
+          const idx = (r + dr) * cols + (c + dc);
+          wordCellMap[idx] = -(artIdx + 2);
+          wordChars[idx] = ch;
+        }
+      }
+      return;
+    }
+
+    // Fallback: restore old position.
+    art.row = oldRow;
+    art.col = oldCol;
+    for (let dr = 0; dr < h; dr++) {
+      for (let dc = 0; dc < w; dc++) {
+        if (lines[dr][dc] === ' ') continue;
+        const idx = (oldRow + dr) * cols + (oldCol + dc);
+        wordCellMap[idx] = -(artIdx + 2);
+        wordChars[idx] = lines[dr][dc];
+      }
+    }
+  }
+
   function resize(): void {
     if (!canvas || !ctx) return;
     dpr = window.devicePixelRatio || 1;
@@ -290,6 +455,7 @@
     wordChars = new Array(cols * rows);
     for (let i = 0; i < wordChars.length; i++) wordChars[i] = '';
     placeWords();
+    placeArt();
     paintAll();
   }
 
@@ -454,6 +620,46 @@
     ctx.fillText(word.text, x0, y0);
   }
 
+  function paintArt(art: PlacedArt, opacity: number, shadow: number, accentBlend: number): void {
+    if (!ctx) return;
+    const lines = art.lines;
+    const h = lines.length;
+    const w = lines[0].length;
+    const x0 = art.col * cellW;
+    const y0 = art.row * cellH;
+
+    // Clear the art's bounding box.
+    ctx.clearRect(x0, y0, w * cellW + 1, h * cellH);
+
+    // Resolve base color (matches paintWord / cellStyle fallback behavior).
+    let baseR: number, baseG: number, baseB: number;
+    if (asciiBaseSet) {
+      baseR = asciiBaseR;
+      baseG = asciiBaseG;
+      baseB = asciiBaseB;
+    } else {
+      const dark = isDark();
+      baseR = baseG = baseB = dark ? 255 : 0;
+    }
+
+    const r2 = Math.round(baseR + (accentR - baseR) * accentBlend);
+    const g2 = Math.round(baseG + (accentG - baseG) * accentBlend);
+    const b2 = Math.round(baseB + (accentB - baseB) * accentBlend);
+
+    ctx.fillStyle = `rgba(${r2},${g2},${b2},${opacity})`;
+    if (shadow > 0) {
+      ctx.shadowColor = ctx.fillStyle as string;
+      ctx.shadowBlur = shadow;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    // Render each non-space line's characters.
+    for (let dr = 0; dr < h; dr++) {
+      ctx.fillText(lines[dr], x0, y0 + dr * cellH);
+    }
+  }
+
   function advanceClickRipples(): void {
     if (clickRipples.length === 0) return;
     const r2Outer = (r: number) => r * r;
@@ -591,6 +797,61 @@
               const op = opacity + (WORD_REVEAL_OPACITY - opacity) * fadeProgress;
               const sh = WORD_REVEAL_SHADOW * rippleGlowMult * fadeProgress;
               paintWord(word, op, sh, fadeProgress);
+            }
+          }
+        }
+      }
+
+      // Multi-line ASCII art state machine (mirrors the word state machine).
+      if (placedArt.length > 0) {
+        const nowMs2 = now;
+        for (let a = 0; a < placedArt.length; a++) {
+          const art = placedArt[a];
+          const lines = art.lines;
+          const hh = lines.length;
+          const ww = lines[0].length;
+
+          if (art.state === 'ambient') {
+            // Trigger if ANY non-space cell of the art has excitement above threshold.
+            let triggered = false;
+            for (let dr = 0; dr < hh && !triggered; dr++) {
+              for (let dc = 0; dc < ww && !triggered; dc++) {
+                if (lines[dr][dc] === ' ') continue;
+                const idx = (art.row + dr) * cols + (art.col + dc);
+                if (excitement[idx] >= WORD_REVEAL_THRESHOLD) triggered = true;
+              }
+            }
+            if (triggered) {
+              art.state = 'revealing';
+              art.stateStartMs = nowMs2;
+              paintArt(art, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
+            }
+          } else if (art.state === 'revealing') {
+            if (nowMs2 - art.stateStartMs >= WORD_REVEAL_HOLD_MS) {
+              art.state = 'fading';
+              art.stateStartMs = nowMs2;
+            } else {
+              paintArt(art, WORD_REVEAL_OPACITY, WORD_REVEAL_SHADOW * rippleGlowMult, 1.0);
+            }
+          } else if (art.state === 'fading') {
+            const t = (nowMs2 - art.stateStartMs) / WORD_REVEAL_FADE_MS;
+            if (t >= 1) {
+              // Paint old cells back to ambient.
+              for (let dr = 0; dr < hh; dr++) {
+                for (let dc = 0; dc < ww; dc++) {
+                  if (lines[dr][dc] === ' ') continue;
+                  const idx = (art.row + dr) * cols + (art.col + dc);
+                  paintCell(idx, opacity);
+                }
+              }
+              art.state = 'ambient';
+              art.stateStartMs = 0;
+              repositionArt(a);
+            } else {
+              const fadeProgress = 1 - t;
+              const op = opacity + (WORD_REVEAL_OPACITY - opacity) * fadeProgress;
+              const sh = WORD_REVEAL_SHADOW * rippleGlowMult * fadeProgress;
+              paintArt(art, op, sh, fadeProgress);
             }
           }
         }
