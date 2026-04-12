@@ -200,6 +200,72 @@
     }
   }
 
+  function repositionWord(wordIdx: number): void {
+    const word = placedWords[wordIdx];
+    if (!word) return;
+
+    const len = word.text.length;
+    const cxCell = Math.floor((window.innerWidth / 2) / cellW);
+    const cyCell = Math.floor((window.innerHeight * 0.45) / cellH);
+    const exclRxCells = Math.ceil((WORD_EXCLUSION_W / 2) / cellW);
+    const exclRyCells = Math.ceil((WORD_EXCLUSION_H / 2) / cellH);
+
+    // Clear old cells first so the overlap check below treats them as free.
+    const oldRow = word.row;
+    const oldCol = word.col;
+    for (let k = 0; k < len; k++) {
+      const idx = oldRow * cols + (oldCol + k);
+      if (idx >= 0 && idx < wordCellMap.length) {
+        wordCellMap[idx] = -1;
+        wordChars[idx] = '';
+      }
+    }
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const r = Math.floor(Math.random() * rows);
+      const c = Math.floor(Math.random() * (cols - len));
+      if (c < 0) continue;
+
+      const midC = c + len / 2;
+      const dx = (midC - cxCell) / exclRxCells;
+      const dy = (r - cyCell) / exclRyCells;
+      if (dx * dx + dy * dy <= 1) continue;
+
+      let clear = true;
+      for (let k = 0; k < len; k++) {
+        for (let dr = -2; dr <= 2 && clear; dr++) {
+          for (let dc = -2; dc <= 2 && clear; dc++) {
+            const rr = r + dr;
+            const cc = c + k + dc;
+            if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue;
+            if (wordCellMap[rr * cols + cc] !== -1) clear = false;
+          }
+        }
+        if (!clear) break;
+      }
+      if (!clear) continue;
+
+      // Commit new placement.
+      word.row = r;
+      word.col = c;
+      for (let k = 0; k < len; k++) {
+        const idx = r * cols + (c + k);
+        wordCellMap[idx] = wordIdx;
+        wordChars[idx] = word.text[k];
+      }
+      return;
+    }
+
+    // If no placement found in 30 tries, restore to old position so the word still exists.
+    word.row = oldRow;
+    word.col = oldCol;
+    for (let k = 0; k < len; k++) {
+      const idx = oldRow * cols + (oldCol + k);
+      wordCellMap[idx] = wordIdx;
+      wordChars[idx] = word.text[k];
+    }
+  }
+
   function resize(): void {
     if (!canvas || !ctx) return;
     dpr = window.devicePixelRatio || 1;
@@ -496,13 +562,15 @@
           } else if (word.state === 'fading') {
             const t = (nowMs - word.stateStartMs) / WORD_REVEAL_FADE_MS;
             if (t >= 1) {
-              word.state = 'ambient';
-              word.stateStartMs = 0;
-              // Final clean paint back to baseline.
+              // First paint the OLD cells back to ambient so no residue remains.
               for (let k = 0; k < wordLen; k++) {
                 const idx = word.row * cols + (word.col + k);
                 paintCell(idx, opacity);
               }
+              word.state = 'ambient';
+              word.stateStartMs = 0;
+              // Pick a new random position for this word.
+              repositionWord(w);
             } else {
               const fadeProgress = 1 - t;
               const op = opacity + (WORD_REVEAL_OPACITY - opacity) * fadeProgress;
