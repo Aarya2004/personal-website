@@ -40,24 +40,47 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
 
     <!-- Theme detection (prevents flash) -->
     <script is:inline>
-      function applyTheme() {
-        const theme = (() => {
-          if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-            return localStorage.getItem('theme');
-          }
-          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        })();
-        if (theme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
+      (function () {
+        const PALETTES = {
+          ember:     { accent: '#C03A2E', bgLight: '#FBF8F5', bgDark: '#0B0A0A' },
+          driftwood: { accent: '#D97706', bgLight: '#FDFBF6', bgDark: '#0C0B09' },
+          meridian:  { accent: '#3949AB', bgLight: '#F7F8FB', bgDark: '#0A0B0E' },
+          moss:      { accent: '#2F6B4E', bgLight: '#F7F9F6', bgDark: '#0A0C0A' },
+          graphite:  { accent: '#475569', bgLight: '#FFFFFF', bgDark: '#000000' },
+        };
+        function hexToRgb(hex) {
+          const c = hex.replace('#', '');
+          return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
         }
-      }
-      applyTheme();
-      document.addEventListener('astro:after-swap', applyTheme);
+        function apply() {
+          const theme =
+            localStorage.getItem('theme') ||
+            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+
+          const colorMode = localStorage.getItem('colorMode') || 'theme';
+          const paletteId = localStorage.getItem('paletteId') || 'ember';
+          const p = PALETTES[paletteId] || PALETTES.ember;
+          const root = document.documentElement;
+          root.style.setProperty('--accent', p.accent);
+          const [r, g, b] = hexToRgb(p.accent);
+          root.style.setProperty('--accent-muted', `rgba(${r},${g},${b},0.12)`);
+          root.style.setProperty('--accent-rgb', `${r} ${g} ${b}`);
+          if (colorMode === 'theme') {
+            root.style.setProperty('--theme-bg-light', p.bgLight);
+            root.style.setProperty('--theme-bg-dark', p.bgDark);
+          } else {
+            root.style.setProperty('--theme-bg-light', '#ffffff');
+            root.style.setProperty('--theme-bg-dark', '#0a0a0a');
+          }
+        }
+        apply();
+        document.addEventListener('astro:after-swap', apply);
+      })();
     </script>
   </head>
-  <body class="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-300">
+  <body class="min-h-screen bg-[color:var(--theme-bg-light,#ffffff)] dark:bg-[color:var(--theme-bg-dark,#0a0a0a)] text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-300">
     <AsciiBackground />
     <Header activeNav={activeNav} />
     <main class="mx-auto max-w-3xl px-6 py-12" transition:animate="fade">
