@@ -10,7 +10,7 @@ const { post } = Astro.props;
 const { title, description, pubDate, tags } = post.data;
 ---
 
-<Layout title={title} description={description} activeNav="blog">
+<Layout title={title} description={description} activeNav="blog" ogType="article" pubDate={pubDate} tags={tags}>
   <article>
     <header class="mb-8">
       <time class="text-sm text-neutral-500 dark:text-neutral-400 theme-text-muted" datetime={pubDate.toISOString()}>
