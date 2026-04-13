@@ -13,15 +13,14 @@ export const projects: Project[] = [
     description:
       'Reinforcement learning model that learns to play Street Fighter on Game Boy Color.',
     tags: ['Python', 'Reinforcement Learning'],
-    repo: 'https://github.com/Aarya2004/street-fighter-ai',
+    repo: 'https://github.com/Aarya2004/Street_fighter_AI',
     featured: true,
   },
   {
     title: 'Pneumonia Detection Model',
     description: 'ML model for detecting pneumonia from chest X-rays using deep learning.',
     tags: ['Python', 'ML', 'Jupyter'],
-    repo: 'https://github.com/Aarya2004/pneumonia-detection',
-    featured: true,
+    repo: 'https://github.com/Aarya2004/Pneumonia-Detection-Model',
   },
   {
     title: 'GroveReservations',
@@ -31,10 +30,17 @@ export const projects: Project[] = [
     featured: true,
   },
   {
+    title: 'AOC 2025',
+    description: 'Advent of Code 2025 solutions.',
+    tags: ['C++'],
+    repo: 'https://github.com/Aarya2004/AOC2025',
+    featured: true,
+  },
+  {
     title: 'CSM Job Viewer',
     description: 'Job listing viewer/scraper.',
     tags: ['Python'],
-    repo: 'https://github.com/Aarya2004/csm-job-viewer',
+    repo: 'https://github.com/Aarya2004/CSM_Job_Viewer',
   },
   {
     title: 'UTASR Website',
@@ -52,12 +58,6 @@ export const projects: Project[] = [
     title: 'AOC 2024',
     description: 'Advent of Code 2024 solutions.',
     tags: ['Python'],
-    repo: 'https://github.com/Aarya2004/aoc-2024',
-  },
-  {
-    title: 'AOC 2025',
-    description: 'Advent of Code 2025 solutions.',
-    tags: ['C++'],
-    repo: 'https://github.com/Aarya2004/aoc-2025',
+    repo: 'https://github.com/Aarya2004/AOC2024',
   },
 ];
