@@ -189,6 +189,14 @@
     modeButtons.forEach((b) => {
       b.addEventListener('click', () => {
         const mode = b.dataset.mode as ColorMode;
+        // Sync localStorage.theme with the current dark-class state before
+        // changing modes, so the user's "apparent" light/dark stays put.
+        // Without this, entering a dark theme then switching to accent mode
+        // leaves `.dark` on visually but localStorage still holds the old
+        // preference — the next page navigation would re-apply the stale
+        // preference and flip the mode unexpectedly.
+        const currentlyDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', currentlyDark ? 'dark' : 'light');
         localStorage.setItem('colorMode', mode);
         populateSwatches(mode);
         applyAndPersist();
