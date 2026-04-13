@@ -14,7 +14,7 @@ const allTags = [...new Set(projects.flatMap((p) => p.tags))].sort();
     {allTags.map((tag) => (
       <button
         data-tag={tag}
-        class="tag-btn rounded-full border border-neutral-200 dark:border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 transition-all hover:border-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2"
+        class="tag-btn theme-card-border rounded-full border border-neutral-200 dark:border-neutral-800 px-3 py-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 transition-all hover:border-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2"
       >
         {tag}
       </button>
