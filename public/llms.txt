@@ -1,0 +1,50 @@
+# Aarya Prakash
+
+> Aarya Prakash is a fourth-year Computer Science student at the University of Toronto, graduating June 2026. He is the co-founder of MedPort, a voice AI platform for healthcare clinics. He has interned at Amazon Web Services, Wealthsimple, and Scotiabank, and served as Vice-Chair of Technology for GenAIGenesis 2026, Canada's largest AI hackathon with over 1,000 attendees. He has conducted machine learning research at the Dunlap Institute of Astrophysics, improving classification of Atacama Cosmology Telescope data for the Simons Observatory. He has served as a teaching assistant for several computer science courses at UTSC, including CSCD01 and CSCA08. His technical focus is ML Systems and distributed infrastructure, with plans to pursue a Master's degree. He is based in Toronto, Canada.
+
+## About
+
+Aarya Prakash is a software engineer and computer science student. His work spans machine learning systems, distributed infrastructure, voice AI, reinforcement learning, and full-stack web engineering. He is interested in bringing ML research into production systems.
+
+## Current Work
+
+- **MedPort** — co-founder of a voice AI platform for healthcare clinics, enabling AI agents for receptionist and triage tasks.
+- **Distributed systems study** — working through Designing Data-Intensive Applications (Kleppmann) and MIT 6.824 lectures in preparation for graduate research in ML systems.
+
+## Past Experience
+
+- **Vice-Chair of Technology, GenAIGenesis 2026** — sole technical architect for Canada's largest AI hackathon (1,000+ in-person attendees, 200+ online). Built the full event technology stack: check-in, meal claiming, WiFi credential distribution, judge assignment systems, bulk authentication, and Twilio SMS infrastructure on Next.js and PostgreSQL.
+- **Software Engineer Intern, Amazon Web Services** — built console UI components, engineered a version history feature for root-cause analysis, performed a 3+ terabyte data migration using CloudFormation, and reduced API query latency by 90%.
+- **Software Engineer Intern, Wealthsimple** — designed and implemented a GraphQL API, integrated an external data source that reduced support tickets by 10%, and unblocked 30% of users experiencing a critical flow failure.
+- **Software Engineer Intern, Scotiabank** — implemented serverless Python functions improving platform reliability by 5-10%. Created Terraform and BigQuery features for fine-grained data protection, replacing manual ticket workflows for over 1,000 users.
+- **Research Assistant, Dunlap Institute of Astrophysics, University of Toronto** — improved machine learning classification of Atacama Cosmology Telescope image data using convolutional neural networks, generative adversarial networks, and vision transformers. Achieved 87% accuracy for the Simons Observatory collaboration.
+- **Teaching Assistant, University of Toronto Scarborough** — taught computer science courses including CSCD01 (Engineering Large Software Systems) and CSCA08 (Introduction to Computer Science).
+
+## Technical Skills
+
+- **Languages:** Python, Go, Java, Kotlin, TypeScript, JavaScript, C, C++, SQL, Ruby, Bash, Haskell
+- **Cloud and DevOps:** AWS, GCP, Azure, Terraform, Linux, Git, Docker, Firebase
+- **Machine learning:** PyTorch, TensorFlow, scikit-learn, NumPy, pandas, Jupyter
+- **Databases:** PostgreSQL, DynamoDB, MongoDB, BigQuery, Pinecone
+- **Web and frameworks:** Node.js, React, Next.js, Astro, Angular, Express, Ktor
+
+## Projects
+
+- **Street Fighter AI** — reinforcement learning model that learns to play Street Fighter on Game Boy Color.
+- **Pneumonia Detection Model** — deep learning model for detecting pneumonia from chest X-rays.
+- **GroveReservations** — reservation management system built in Go for a 300-person family compound.
+- **kotml** — open-source Weights and Biases alternative written in Kotlin.
+- **Advent of Code 2024 and 2025** — complete solutions in Python and C++.
+- **Personal Website (aaryap.com)** — this site, built with Astro and Tailwind CSS.
+
+## Links
+
+- Website: https://aaryap.com
+- GitHub: https://github.com/Aarya2004
+- LinkedIn: https://linkedin.com/in/aarya-prakash
+- Email: aaryaprakash2022@gmail.com
+
+## Optional
+
+- [Blog](https://aaryap.com/blog) — writing on ML systems, distributed infrastructure, and software engineering.
+- [Projects](https://aaryap.com/projects) — full list of projects and open-source work.
