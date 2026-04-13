@@ -9,18 +9,18 @@ export type ColorMode = 'accent' | 'theme';
 
 export interface RippleProfile {
   asciiBaseRgb: [number, number, number]; // ambient glyph base color
-  glowMultiplier: number;                 // multiplies shadowBlur
+  glowMultiplier: number; // multiplies shadowBlur
 }
 
 export interface Palette {
   id: PaletteId;
   name: string;
-  accent: string;       // hex
-  bgHex: string;        // theme-mode page background
-  textHex: string;      // theme-mode body text
-  fontDisplay: string;  // CSS font-family string for display headings
-  fontBody: string;     // CSS font-family string for body
-  fontMono: string;     // CSS font-family string for mono
+  accent: string; // hex
+  bgHex: string; // theme-mode page background
+  textHex: string; // theme-mode body text
+  fontDisplay: string; // CSS font-family string for display headings
+  fontBody: string; // CSS font-family string for body
+  fontMono: string; // CSS font-family string for mono
   ripple: RippleProfile;
 }
 
@@ -82,13 +82,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
   },
 };
 
-export const PALETTE_IDS: PaletteId[] = [
-  'ember',
-  'driftwood',
-  'meridian',
-  'moss',
-  'graphite',
-];
+export const PALETTE_IDS: PaletteId[] = ['ember', 'driftwood', 'meridian', 'moss', 'graphite'];
 
 export const DEFAULT_PALETTE_ID: PaletteId = 'ember';
 export const DEFAULT_COLOR_MODE: ColorMode = 'theme';
@@ -105,7 +99,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 function mix(
   a: { r: number; g: number; b: number },
   b: { r: number; g: number; b: number },
-  t: number
+  t: number,
 ): string {
   const r = Math.round(a.r + (b.r - a.r) * t);
   const g = Math.round(a.g + (b.g - a.g) * t);
@@ -121,10 +115,7 @@ function mix(
  * In theme mode: full palette is written, including fonts and derived tones.
  * `data-theme-active="true"` is SET on <html> so global CSS overrides engage.
  */
-export function applyPalette(
-  paletteId: PaletteId,
-  colorMode: ColorMode
-): void {
+export function applyPalette(paletteId: PaletteId, colorMode: ColorMode): void {
   const p = PALETTES[paletteId] ?? PALETTES[DEFAULT_PALETTE_ID];
   const root = document.documentElement;
 
@@ -133,12 +124,9 @@ export function applyPalette(
   const accentRgb = hexToRgb(p.accent);
   root.style.setProperty(
     '--accent-muted',
-    `rgba(${accentRgb.r},${accentRgb.g},${accentRgb.b},0.12)`
+    `rgba(${accentRgb.r},${accentRgb.g},${accentRgb.b},0.12)`,
   );
-  root.style.setProperty(
-    '--accent-rgb',
-    `${accentRgb.r} ${accentRgb.g} ${accentRgb.b}`
-  );
+  root.style.setProperty('--accent-rgb', `${accentRgb.r} ${accentRgb.g} ${accentRgb.b}`);
   const accentLum = 0.299 * accentRgb.r + 0.587 * accentRgb.g + 0.114 * accentRgb.b;
   root.style.setProperty('--accent-contrast', accentLum > 170 ? '#0a0a0a' : '#ffffff');
 
