@@ -71,7 +71,7 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
             asciiBase: [30, 50, 35], glowMult: 1.4,
           },
           graphite: {
-            accent: '#8BA3C7', bg: '#2A2C30', text: '#DADCE0',
+            accent: '#8BA3C7', bg: '#2A2C30', text: '#EFF1F4',
             display: "'IBM Plex Mono', ui-monospace, monospace",
             body: "'IBM Plex Sans', system-ui, sans-serif",
             mono: "'IBM Plex Mono', ui-monospace, monospace",
@@ -124,7 +124,7 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
             root.style.setProperty('--theme-bg', p.bg);
             root.style.setProperty('--theme-text', p.text);
             root.style.setProperty('--theme-text-muted', mix(text, bg, 0.35));
-            root.style.setProperty('--theme-border', mix(bg, text, 0.15));
+            root.style.setProperty('--theme-border', mix(bg, text, 0.25));
             root.style.setProperty('--theme-surface', mix(bg, text, 0.04));
             root.style.setProperty('--font-display', p.display);
             root.style.setProperty('--font-body', p.body);
@@ -202,6 +202,10 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
         font-family: var(--font-body);
         color: var(--theme-text);
       }
+      html[data-theme-active="true"] .text-neutral-700,
+      html[data-theme-active="true"] .dark\:text-neutral-300 {
+        color: var(--theme-text);
+      }
       html[data-theme-active="true"] h1,
       html[data-theme-active="true"] h2,
       html[data-theme-active="true"] h3,
@@ -218,7 +222,7 @@ const { title, description = 'Personal website and blog', activeNav } = Astro.pr
         border-color: var(--theme-border);
       }
       html[data-theme-active="true"] .theme-card-border {
-        border-color: var(--theme-border);
+        border-color: var(--theme-border) !important;
       }
       html[data-theme-active="true"] .theme-text-muted {
         color: var(--theme-text-muted);

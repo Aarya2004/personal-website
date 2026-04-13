@@ -74,7 +74,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     name: 'Graphite',
     accent: '#8BA3C7',
     bgHex: '#2A2C30',
-    textHex: '#DADCE0',
+    textHex: '#EFF1F4',
     fontDisplay: "'IBM Plex Mono', ui-monospace, monospace",
     fontBody: "'IBM Plex Sans', system-ui, sans-serif",
     fontMono: "'IBM Plex Mono', ui-monospace, monospace",
@@ -158,7 +158,7 @@ export function applyPalette(
     root.style.setProperty('--theme-bg', p.bgHex);
     root.style.setProperty('--theme-text', p.textHex);
     root.style.setProperty('--theme-text-muted', mix(text, bg, 0.35));
-    root.style.setProperty('--theme-border', mix(bg, text, 0.15));
+    root.style.setProperty('--theme-border', mix(bg, text, 0.25));
     root.style.setProperty('--theme-surface', mix(bg, text, 0.04));
 
     root.style.setProperty('--font-display', p.fontDisplay);
