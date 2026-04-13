@@ -39,25 +39,30 @@ const allTags = [...new Set(projects.flatMap((p) => p.tags))].sort();
 </style>
 
 <script>
-  const buttons = document.querySelectorAll<HTMLButtonElement>('.tag-btn');
-  const cards = document.querySelectorAll<HTMLElement>('[data-project-tags]');
-  let activeTag: string | null = null;
+  function initTagFilter() {
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.tag-btn');
+    const cards = document.querySelectorAll<HTMLElement>('[data-project-tags]');
+    let activeTag: string | null = null;
 
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tag = btn.dataset.tag!;
-      if (activeTag === tag) {
-        activeTag = null;
-        buttons.forEach((b) => delete b.dataset.active);
-        cards.forEach((c) => (c.style.display = ''));
-      } else {
-        activeTag = tag;
-        buttons.forEach((b) => delete b.dataset.active);
-        btn.dataset.active = 'true';
-        cards.forEach((c) => {
-          c.style.display = c.dataset.projectTags!.split(',').includes(tag) ? '' : 'none';
-        });
-      }
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.tag!;
+        if (activeTag === tag) {
+          activeTag = null;
+          buttons.forEach((b) => delete b.dataset.active);
+          cards.forEach((c) => (c.style.display = ''));
+        } else {
+          activeTag = tag;
+          buttons.forEach((b) => delete b.dataset.active);
+          btn.dataset.active = 'true';
+          cards.forEach((c) => {
+            c.style.display = c.dataset.projectTags!.split(',').includes(tag) ? '' : 'none';
+          });
+        }
+      });
     });
-  });
+  }
+
+  initTagFilter();
+  document.addEventListener('astro:after-swap', initTagFilter);
 </script>
