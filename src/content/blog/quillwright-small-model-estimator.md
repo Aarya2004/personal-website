@@ -138,6 +138,20 @@ The hero claim is _no cloud_. The honest version of that claim has two parts:
   env var and the brain moves from a 4B on a laptop to a 30B on a GPU without touching the
   agent code.
 
+Same agent, same tools, same Facts-from-Tools guarantee — only the models behind each role
+change:
+
+| Role              | 🔒 Private Stack (local)          | ⚡ Best Stack (Modal)        |
+| ----------------- | --------------------------------- | ---------------------------- |
+| **Brain**         | Nemotron-3-Nano 4B (NVIDIA)       | Nemotron-3-Nano 30B (NVIDIA) |
+| **Perception**    | MiniCPM-V (OpenBMB)               | Nemotron-Omni 30B (NVIDIA)   |
+| **Audio**         | Cohere Transcribe (on-device)     | Nemotron-Omni 30B (NVIDIA)   |
+| **Multilingual**  | Aya (Cohere)                      | Aya-Expanse 8B (Cohere)      |
+| **Embedding**     | on-device (sentence-transformers) | _same on-device path_        |
+| **Extraction**    | _no local path_                   | Parse extractor (fine-tuned) |
+| **Runs offline?** | ✅ Yes — Airplane-Mode Proof      | ❌ No — hosted GPU endpoints |
+| **Cost / GPU**    | $0, your hardware                 | scales to zero when idle     |
+
 We hold the same line everywhere a feature could over-claim. The "Finalize & Send" feature
 really texts or emails the estimate **on the local path** with your own provider creds; on
 the public Space it drafts only and tells you nothing was transmitted. Same for the phone
