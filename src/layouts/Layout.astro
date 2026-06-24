@@ -11,8 +11,12 @@ interface Props {
   activeNav?: string;
   ogType?: 'website' | 'article';
   ogImage?: string;
+  ogImageAlt?: string;
   pubDate?: Date;
+  updatedDate?: Date;
   tags?: string[];
+  /** Page-specific JSON-LD nodes (Article, BreadcrumbList, ItemList, WebSite, …). */
+  extraSchemas?: Record<string, unknown>[];
 }
 
 const {
@@ -21,8 +25,11 @@ const {
   activeNav,
   ogType = 'website',
   ogImage = '/og-image.jpg',
+  ogImageAlt = `${personal.name} — ${personal.tagline}`,
   pubDate,
+  updatedDate,
   tags,
+  extraSchemas = [],
 } = Astro.props;
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
@@ -38,6 +45,7 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
     <meta name="robots" content="index, follow" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" type="application/rss+xml" title={`${personal.name} — Blog`} href={new URL('/rss.xml', Astro.site).href} />
     <meta name="generator" content={Astro.generator} />
     <meta name="author" content={personal.name} />
 
@@ -47,9 +55,16 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content={personal.name} />
+    <meta property="og:locale" content="en_US" />
     {pubDate && (
       <meta property="article:published_time" content={pubDate.toISOString()} />
+    )}
+    {updatedDate && (
+      <meta property="article:modified_time" content={updatedDate.toISOString()} />
     )}
     {tags && tags.map((tag) => (
       <meta property="article:tag" content={tag} />
@@ -57,9 +72,12 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@APrak2022" />
+    <meta name="twitter:creator" content="@APrak2022" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
 
     <!-- JSON-LD Person schema (homepage + all pages) -->
     <script type="application/ld+json" set:html={JSON.stringify({
@@ -69,7 +87,7 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
       url: Astro.site?.href,
       image: new URL('/headshot.jpg', Astro.site).href,
       jobTitle: personal.tagline,
-      description: "Fourth-year Computer Science student at the University of Toronto. Co-founder of MedPort. Focused on ML systems and distributed infrastructure.",
+      description: "Recent Computer Science graduate from the University of Toronto. Co-founder of MedPort. Focused on ML systems and distributed infrastructure.",
       address: {
         '@type': 'PostalAddress',
         addressLocality: personal.location,
@@ -103,8 +121,14 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
       sameAs: [
         `https://github.com/${personal.github}`,
         `https://linkedin.com/in/${personal.linkedin}`,
+        'https://x.com/APrak2022',
       ],
     })} />
+
+    <!-- Page-specific JSON-LD (Article, BreadcrumbList, WebSite, ItemList, …) -->
+    {extraSchemas.map((schema) => (
+      <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    ))}
 
     <!-- Fonts -->
     <!-- fonts.googleapis.com preconnect is sent by Cloudflare Early Hints header -->

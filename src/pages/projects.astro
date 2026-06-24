@@ -4,9 +4,32 @@ import ProjectCard from '../components/ProjectCard.astro';
 import { projects } from '../data/projects';
 
 const allTags = [...new Set(projects.flatMap((p) => p.tags))].sort();
+
+const projectsDescription =
+  "Projects by Aarya Prakash — ML, reinforcement learning, distributed systems, and web engineering. Including Street Fighter AI, a pneumonia detection model, GroveReservations, and more.";
+
+const itemListSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Projects by Aarya Prakash',
+  description: projectsDescription,
+  itemListElement: projects.map((project, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'SoftwareSourceCode',
+      name: project.title,
+      description: project.description,
+      ...(project.repo ? { codeRepository: project.repo } : {}),
+      ...(project.url ? { url: project.url } : {}),
+      keywords: project.tags.join(', '),
+      author: { '@type': 'Person', name: 'Aarya Prakash', url: Astro.site?.href },
+    },
+  })),
+};
 ---
 
-<Layout title="Projects" description="Things I've built" activeNav="projects">
+<Layout title="Projects" description={projectsDescription} activeNav="projects" extraSchemas={[itemListSchema]}>
   <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Projects</h1>
   <p class="mt-2 text-neutral-600 dark:text-neutral-400">Things I've built and worked on.</p>
 

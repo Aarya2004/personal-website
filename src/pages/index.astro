@@ -16,9 +16,26 @@ function readingTime(body: string): string {
 const recentPosts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .slice(0, 3);
+
+const homeDescription =
+  'Aarya Prakash — recent Computer Science graduate from the University of Toronto and co-founder of MedPort. Building ML systems, distributed infrastructure, and voice AI. Writing about small models, agents, and systems engineering.';
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: personal.name,
+  url: Astro.site?.href,
+  description: homeDescription,
+  inLanguage: 'en-US',
+  author: {
+    '@type': 'Person',
+    name: personal.name,
+    url: Astro.site?.href,
+  },
+};
 ---
 
-<Layout title={personal.name} description="Personal website and blog" activeNav="home">
+<Layout title={personal.name} description={homeDescription} activeNav="home" extraSchemas={[websiteSchema]}>
 
   <!-- Bio -->
   <section class="pb-12">
