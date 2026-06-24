@@ -1,10 +1,10 @@
 # Aarya Prakash
 
-> Aarya Prakash is a fourth-year Computer Science student at the University of Toronto, graduating June 2026. He is the co-founder of MedPort, a voice AI platform for healthcare clinics. He has interned at Amazon Web Services, Wealthsimple, and Scotiabank, and served as Vice-Chair of Technology for GenAIGenesis 2026, Canada's largest AI hackathon with over 1,000 attendees. He has conducted machine learning research at the Dunlap Institute of Astrophysics, improving classification of Atacama Cosmology Telescope data for the Simons Observatory. He has served as a teaching assistant for several computer science courses at UTSC, including CSCD01 and CSCA08. His technical focus is ML Systems and distributed infrastructure, with plans to pursue a Master's degree. He is based in Toronto, Canada.
+> Aarya Prakash is a recent Computer Science graduate of the University of Toronto (Class of 2026). He is the co-founder of MedPort, a voice AI platform for healthcare clinics. He has interned at Amazon Web Services, Wealthsimple, and Scotiabank, and served as Vice-Chair of Technology for GenAIGenesis 2026, Canada's largest AI hackathon with over 1,000 attendees. He has conducted machine learning research at the Dunlap Institute of Astrophysics, improving classification of Atacama Cosmology Telescope data for the Simons Observatory. He has served as a teaching assistant for several computer science courses at UTSC, including CSCD01 and CSCA08. His technical focus is ML Systems and distributed infrastructure, with plans to pursue a Master's degree. He is based in Toronto, Canada.
 
 ## About
 
-Aarya Prakash is a software engineer and computer science student. His work spans machine learning systems, distributed infrastructure, voice AI, reinforcement learning, and full-stack web engineering. He is interested in bringing ML research into production systems.
+Aarya Prakash is a software engineer and recent computer science graduate. His work spans machine learning systems, distributed infrastructure, voice AI, reinforcement learning, and full-stack web engineering. He is interested in bringing ML research into production systems.
 
 ## Current Work
 

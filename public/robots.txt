@@ -1,3 +1,6 @@
+# Aarya Prakash — aaryap.com
+# AI/LLM crawlers welcome. Structured summary for assistants: /llms.txt
+
 User-agent: *
 Allow: /
 
