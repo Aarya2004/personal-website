@@ -1,6 +1,6 @@
 ---
 title: "Field Notes: building a small-model estimator that tells the truth"
-description: How Quillwright turns a photo and a voice note into a tradesperson's estimate — with an orchestra of small models, on your own machine, and not a single number invented by an LLM.
+description: How Quillwright turns a photo and a voice note into a tradesperson's estimate, using a handful of small models, running on your own machine, with no number ever invented by an LLM.
 pubDate: 2026-06-15
 author: Aarya Prakash
 tags:
@@ -8,112 +8,107 @@ tags:
   - agents
   - evals
   - fine-tuning
-draft: true
 ---
 
-_How Quillwright turns a photo and a voice note into a tradesperson's estimate — with an
-orchestra of small models, on your own machine, and not a single number invented by an LLM._
+_How Quillwright turns a photo and a voice note into a tradesperson's estimate, using a
+handful of small models, running on your own machine, with no number ever invented by an LLM._
 
-## The job nobody wants
+This was a project I built to learn, so these are field notes more than a launch post: what I
+tried, what I got wrong first, and the few things that turned out to matter.
 
-Every tradesperson does the same unpaid hour after the real work is done: writing up the
-estimate. Parts, quantities, labor, a defensible total. Quillwright is an on-device,
-human-supervised agent that does that draft from a **field capture** — a job photo plus a
-spoken note — and hands back an itemized, editable estimate.
+## The problem
 
-The constraints we set ourselves were the interesting part: **small models** (≤32B), **no
-third-party AI APIs**, and a hard rule that **no customer-facing number ever comes from a
-language model.** Those three constraints shaped every decision below.
+Every tradesperson does the same unpaid hour after the real work: writing up the estimate.
+Parts, quantities, labor, a defensible total. Quillwright drafts that from a photo of the job
+plus a spoken note, and hands back an itemized estimate you can edit.
 
-## An orchestra, not a soloist
+I set three constraints up front: only **small models** (≤32B), **no third-party AI APIs**,
+and **no customer-facing number ever comes from a language model**. The last one shaped almost
+every decision that followed.
 
-There's no single model doing the work. Each role in the pipeline resolves to a small,
-purpose-fit model:
+## The pipeline
 
-- **Perception** — MiniCPM-V (OpenBMB) reads the job photo into observations ("RUN
-  CAPACITOR", a nameplate model number).
-- **Agent Brain** — NVIDIA Nemotron-3-Nano drives a narrow tool-calling loop: which items,
-  what quantities, when it's done.
-- **Audio** — Cohere Transcribe turns the voice note into text on-device.
-- **Multilingual** — Cohere Aya translates the customer-facing copy (Spanish, French,
-  Mandarin) — descriptions only, never the numbers.
-- **Embedding** — a small embedder powers semantic recall of similar past jobs.
+There's no single model doing the work. Each role in the pipeline is a small model picked for
+that job:
 
-The brain's tool surface is deliberately tiny — essentially _add a priced item_ and
-_finish_. That narrowness is **why a 4B model is reliable** here: it does routing and
-judgment, not arithmetic.
+- **Perception:** MiniCPM-V reads the job photo into observations (a nameplate model number,
+  "RUN CAPACITOR").
+- **Brain:** NVIDIA Nemotron-3-Nano runs a narrow tool-calling loop: which items, what
+  quantities, when to stop.
+- **Audio:** Cohere Transcribe turns the voice note into text on-device.
+- **Multilingual:** Cohere Aya translates the customer-facing copy (descriptions only, never
+  the numbers).
+- **Embedding:** a small embedder powers recall of similar past jobs.
 
-## Facts-from-Tools: the rule that runs through everything
+The brain's tool surface is tiny: basically _add a priced item_ and _finish_. Keeping it that
+narrow is what let a 4B model be reliable. It does routing and judgment, not arithmetic.
 
-The correctness rule is simple to state and ruthless to enforce: **any number that reaches
-the customer — price, quantity, tax, total — comes from a tool (a catalog lookup, a
-deterministic `compute`) or from a human edit. Never from the model's free generation.**
+## Facts-from-Tools
 
-It holds in the obvious places (the brain calls `lookup_price`, not "I think this costs
-$40") and the non-obvious ones:
+The core rule: any number that reaches the customer (price, quantity, tax, total) comes from a
+tool (a catalog lookup, a deterministic `compute`) or from a human edit. Never from the model
+generating text.
 
-- **Edits** re-run through a server-authoritative recalc. The browser never computes its own
-  total.
+That's obvious when the brain calls `lookup_price` instead of guessing "$40." It mattered more
+in places I didn't expect:
+
+- **Edits** re-run through a server-side recalc; the browser never computes its own total.
 - **Translation** changes words, not digits.
-- **Document Capture** (reading a supplier quote) produces _Proposed Line Items_ — the
-  document is the source, but a price only becomes customer-facing once a human confirms it.
-- **The refinement chat** keeps a sanitized history: when you reopen an estimate and keep
-  editing, the model sees _what you asked_ ("make it 2 hours") but takes the _numbers_ from
-  the current line items — a stale dollar figure can never leak back in. Even the
-  conversation's own compaction is done in code, not by asking a model to summarize.
+- **Reading a supplier quote** produces _proposed_ line items; a price only goes
+  customer-facing once a human confirms it.
+- **The refinement chat** keeps a sanitized history: the model sees what you asked ("make it 2
+  hours") but pulls numbers from the current line items, so a stale dollar figure can't leak
+  back in.
 
-## The eval story (the part I'd tell another builder)
+## The eval
 
-Here's the moment that changed how we built this. We ran the agent by hand on a handful of
-jobs and it looked **perfect**. Then we wrote an eval set and scored it.
+I ran the agent by hand on a handful of jobs and it looked perfect. Then I wrote an eval set
+and scored it properly.
 
 **Item F1: 0.367.**
 
 ![Agent Brain item F1](/blog/quillwright/brain_f1.png)
 
-Manual testing had been lying to us — we'd unconsciously fed it the cases it handled. The
-eval set didn't. Two fixes, both measured:
+My manual testing had been feeding it the cases I already knew it handled. The eval set didn't.
+Two fixes, both measured:
 
-1. **Fuzzy catalog lookup** — "refrigerant" should find `refrigerant_r410a`. F1 jumped to
-   **0.880**.
-2. **Prompt tuning** the brain's tool-calling — to **0.967**, with quantity accuracy going
-   from 0.40 to 1.00.
+1. **Fuzzy catalog lookup** so "refrigerant" finds `refrigerant_r410a`. F1 jumped to **0.880**.
+2. **Prompt tuning** the tool-calling, up to **0.967**, with quantity accuracy going from 0.40
+   to 1.00.
 
-The lesson isn't "we got a good number." It's that the good number only existed because we
-were willing to be told a bad one first.
+The number worth remembering is the 0.37, not the 0.97. Writing the eval before trusting the
+demo is the main habit I took away from the project.
 
-## Memory that gets smarter, measured the same way
+## Memory
 
-Quillwright recalls similar past jobs to inform a new estimate. The first version used
-keyword matching. We measured **recall@1 = 0.750**. Swapping in a small embedder for a
-semantic re-rank moved it to **0.875** — with one honest remaining miss we left in, because
-a benchmark with no failures is a benchmark you don't trust.
+Quillwright recalls similar past jobs to inform a new estimate. My first version used keyword
+matching: **recall@1 = 0.750**. Swapping in a small embedder for a semantic re-rank moved it to
+**0.875**, with one miss left in, because a benchmark with no failures isn't one I'd trust.
 
 ![Episodic recall](/blog/quillwright/recall.png)
 
-## Fine-tuning a small vision model on receipts — and on the real domain
+## Fine-tuning a small vision model
 
-The 🎯 artifact is a MiniCPM-V LoRA fine-tune. On the public **CORD** receipt benchmark, the
-tune lifted item F1 from **0.588 → 0.681** (+0.09). But CORD is receipts, not trade
-invoices — so we also generated a grounded-synthetic set of trade invoices (built from a
-real 381-entry trade catalog) and fine-tuned on that. In-distribution, the tune went from
-**0.703 → 0.933** (+0.23), with price accuracy hitting 1.00.
+The artifact I'm proudest of is a MiniCPM-V LoRA fine-tune. On the public **CORD** receipt
+benchmark, the tune lifted item F1 from **0.588 → 0.681**. But CORD is receipts, not trade
+invoices, so I also generated a synthetic set of trade invoices from a real 381-entry catalog
+and fine-tuned on that. In-distribution, it went from **0.703 → 0.933**, with price accuracy at
+1.00.
 
 ![MiniCPM-V fine-tune](/blog/quillwright/finetune.png)
 
-The +0.23 is the honest headline: a small model, fine-tuned on the actual domain, closes
-most of the gap to a clean read. The +0.09 on CORD is the conservative one — it's a harder,
-out-of-domain benchmark, and we report it anyway.
+A small model fine-tuned on the actual domain closes most of the gap to a clean read. The +0.09
+on CORD is the harder, out-of-domain number, and I report it alongside.
 
 ## Artifacts
 
-Both LoRA adapters are on the Hub, and every number above is reproducible from the eval
-scripts in the repo:
+Both LoRA adapters are on the Hub, and every number above is reproducible from the eval scripts
+in the repo:
 
-- 🎯 [`Aarya2004/minicpmv-trade-lora`](https://huggingface.co/Aarya2004/minicpmv-trade-lora)
-  — the in-domain trade-invoice tune (0.703 → 0.933).
-- [`Aarya2004/minicpmv-cord-lora`](https://huggingface.co/Aarya2004/minicpmv-cord-lora) —
-  the conservative CORD baseline (0.588 → 0.681).
+- [`Aarya2004/minicpmv-trade-lora`](https://huggingface.co/Aarya2004/minicpmv-trade-lora): the
+  in-domain trade-invoice tune (0.703 → 0.933).
+- [`Aarya2004/minicpmv-cord-lora`](https://huggingface.co/Aarya2004/minicpmv-cord-lora): the
+  CORD baseline (0.588 → 0.681).
 
 | Metric                               | Before | After |
 | ------------------------------------ | ------ | ----- |
@@ -122,58 +117,53 @@ scripts in the repo:
 | MiniCPM-V item F1 (trade, in-domain) | 0.703  | 0.933 |
 | MiniCPM-V item F1 (CORD, OOD)        | 0.588  | 0.681 |
 
-## "On your own machine" — and the honesty around it
+Quillwright was built for the Build Small Hackathon (Backyard AI track):
 
-The hero claim is _no cloud_. The honest version of that claim has two parts:
+- **Code:** [github.com/Aarya2004/Quillwright](https://github.com/Aarya2004/Quillwright)
+- **Demo:** [a walkthrough](https://youtu.be/KqTJc9vYlb0)
+- **Full write-up:** [on Dev.to](https://dev.to/aarya_prakash_1328e1617f6/build-small-hackathon-quillwright-573f)
+- **Thread:** [the project on X](https://x.com/APrak2022/status/2066633276379255060)
 
-- The **Private Stack** is open small models with no third-party AI APIs. Locally, those
-  models genuinely run on the dev machine via Ollama / llama.cpp — and we filmed an
-  **Airplane-Mode Proof**: Wi-Fi off, a real forge completing.
-- The **hosted demo Space** is wired live to **Modal** GPUs — the **Best Stack**: a
-  Nemotron-3-Nano 30B brain, Nemotron-Omni for vision and audio, Aya-Expanse for
-  multilingual. It's the same agent loop and the same Facts-from-Tools guarantees as the
-  local run, just with more headroom; the apps scale to zero when idle, so the Space can fall
-  back to a lightweight CPU mode (and says so on the page) when the models aren't wired. The
-  local Private Stack and the hosted Best Stack are the same family at two tiers — flip one
-  env var and the brain moves from a 4B on a laptop to a 30B on a GPU without touching the
-  agent code.
+## Running on your own machine
 
-Same agent, same tools, same Facts-from-Tools guarantee — only the models behind each role
-change:
+There are two ways to run it. Locally, it uses open small models with no third-party AI APIs,
+running on the dev machine through Ollama / llama.cpp. To check it really worked offline I turned
+off Wi-Fi and recorded an estimate completing.
 
-| Role              | 🔒 Private Stack (local)          | ⚡ Best Stack (Modal)        |
+The hosted demo runs the exact same agent loop on Modal GPUs with bigger models: a
+Nemotron-3-Nano 30B brain, Nemotron-Omni for vision and audio, and Aya-Expanse for multilingual.
+The Facts-from-Tools rule is identical; the larger models just have more room. Switching between
+the two is one env var, so the brain can go from a 4B on a laptop to a 30B on a GPU without any
+changes to the agent code.
+
+| Role              | 🔒 Local                          | ⚡ Hosted (Modal)            |
 | ----------------- | --------------------------------- | ---------------------------- |
 | **Brain**         | Nemotron-3-Nano 4B (NVIDIA)       | Nemotron-3-Nano 30B (NVIDIA) |
 | **Perception**    | MiniCPM-V (OpenBMB)               | Nemotron-Omni 30B (NVIDIA)   |
 | **Audio**         | Cohere Transcribe (on-device)     | Nemotron-Omni 30B (NVIDIA)   |
 | **Multilingual**  | Aya (Cohere)                      | Aya-Expanse 8B (Cohere)      |
 | **Embedding**     | on-device (sentence-transformers) | _same on-device path_        |
-| **Extraction**    | _no local path_                   | Parse extractor (fine-tuned) |
-| **Runs offline?** | ✅ Yes — Airplane-Mode Proof      | ❌ No — hosted GPU endpoints |
+| **Runs offline?** | ✅ Yes                            | ❌ No, hosted GPU endpoints  |
 | **Cost / GPU**    | $0, your hardware                 | scales to zero when idle     |
 
-We hold the same line everywhere a feature could over-claim. The "Finalize & Send" feature
-really texts or emails the estimate **on the local path** with your own provider creds; on
-the public Space it drafts only and tells you nothing was transmitted. Same for the phone
-call and the phone-capture QR: real on the tunneled local machine, honestly framed.
+I tried to keep features from claiming more than they do. "Finalize & Send" actually texts or
+emails the estimate when you run it locally with your own provider credentials; on the public
+demo it only drafts the message and tells you nothing was sent.
 
 ## Three ways in
 
-Once the core was solid, the capture surface grew — each path lands in the _same_ pipeline
-and the _same_ Facts-from-Tools guarantees:
+Each capture path lands in the same pipeline:
 
-1. **The Workspace** — type/paste a note, add a photo, watch the Digital Apprentice stream.
-2. **Call a phone number** — describe the job out loud; it transcribes the call, forges a
-   **draft** estimate, reads the total back, and texts you the PDF. A human approves later.
-3. **Scan a QR** — capture a photo and voice note on your phone; the desktop forges it live
-   on screen.
+1. **The Workspace:** type or paste a note, add a photo, watch it draft live.
+2. **Call a phone number:** describe the job out loud; it transcribes, drafts the estimate,
+   reads the total back, and texts you the PDF. A human approves later.
+3. **Scan a QR:** capture a photo and voice note on your phone; the desktop drafts it on screen.
 
-## What I'd carry to the next project
+## What I took away
 
-- **Write the eval before you trust the demo.** 0.37 was the most useful number in the whole
-  build.
-- **Keep the model's job small.** The brain is reliable because it never touches arithmetic.
-- **Make the honesty structural, not aspirational.** "The model never emits a number" is a
-  code path, not a promise — and it's the same code path on every capture surface.
+- Write the eval before you trust the demo. 0.37 was the most useful number in the build.
+- Keep the model's job small. The brain is reliable because it never touches arithmetic.
+- Make the honesty a code path, not a promise. The model can't emit a number because there's no
+  path for it to, on any capture surface.
 
-_Quillwright — tell it about the job; it drafts the estimate._
+_Quillwright: tell it about the job; it drafts the estimate._
