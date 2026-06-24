@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@astrojs/rss": "^4.0.18",
     "@astrojs/tailwind": "^5.1.0",
     "@opentui/core": "^0.1.88",
     "@tailwindcss/typography": "^0.5.15",
